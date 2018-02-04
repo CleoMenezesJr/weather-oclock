@@ -1,0 +1,8 @@
+{
+"uuid": "weatherintheclock@github.io",
+"name": "Weather In The Clock",
+"description": "Display the current Weather in the Clock.",
+"original-author": "JasonLG1979@github.io",
+"shell-version": ["3.26"],
+"url": "https://github.com/JasonLG1979/gnome-shell-extensions-weather-in-the-clock/"
+}
