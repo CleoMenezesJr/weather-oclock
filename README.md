@@ -9,6 +9,11 @@ GNOME Weather is required.
 ## Why GNOME Shell 3.26+?
 This extension uses native JavaScript(ES6) features incompatible with GNOME Shell < 3.26.
 
+## Installation
+
+See the [Installation wiki page](https://github.com/JasonLG1979/gnome-shell-extensions-weather-in-the-clock/wiki/Installation)
+
+
 ## Authors
   * JasonLG1979 (Jason Gray)
 
