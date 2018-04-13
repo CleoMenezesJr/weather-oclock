@@ -3,6 +3,6 @@
 "name": "Weather In The Clock",
 "description": "Display the current Weather in the Clock.",
 "original-author": "JasonLG1979@github.io",
-"shell-version": ["3.26"],
+"shell-version": ["3.26", "3.28"],
 "url": "https://github.com/JasonLG1979/gnome-shell-extensions-weather-in-the-clock/"
 }
