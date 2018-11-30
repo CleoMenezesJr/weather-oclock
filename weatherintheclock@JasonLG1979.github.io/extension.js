@@ -60,6 +60,9 @@ class WeatherItems {
         });
         this.label.hide();
         this._weatherClient = new Weather.WeatherClient();
+        if (this._weatherClient._useAutoLocation) {
+            this._weatherClient._updateAutoLocation();
+        }
         this._weatherChangedId = this._weatherClient.connect('changed', this._onUpdate.bind(this));
         this._weatherTimeoutId = Mainloop.timeout_add_seconds(UPDATE_TIMEOUT, () => {
             this._weatherClient.update();
