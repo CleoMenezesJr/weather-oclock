@@ -21,7 +21,6 @@
 "use strict";
 
 const Clutter = imports.gi.Clutter;
-const GLib = imports.gi.GLib;
 const St = imports.gi.St;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
@@ -35,9 +34,6 @@ const INT_UPDATE_INTERVAL = 3;
 
 // Update the weather every 10 min in the long term.
 const LONG_TERM_UPDATE_INTERVAL = 60 * 10;
-
-// One sec.
-const UPDATE_THRESHOLD = 1000000;
 
 var weatherItems = null;
 
@@ -68,85 +64,60 @@ class WeatherItems {
             y_align: Clutter.ActorAlign.CENTER
         });
         this.label.hide();
+        this._timeoutId = null;
         this._weatherClient = new Weather.WeatherClient();
-        this._lastUpdate = 0;
-        this._weatherIntTimeoutId = null;
-        this._weatherLongTermTimeoutId = null;
-        this._weatherChangedId = this._weatherClient.connect('changed', () => {
-            let now = GLib.get_monotonic_time();
-            if ((now - this._lastUpdate) > UPDATE_THRESHOLD) {
-                this._update(now);
-            }
-        });
-        if (this._weatherClient.available && this._weatherClient.hasLocation) {
-            // We don't want to rapid fire timeouts if there is no weatherClient
-            // or it doesn't have a valid location.
-            this._weatherIntTimeoutId = Mainloop.timeout_add_seconds(INT_UPDATE_INTERVAL, () => {
-                this._weatherClient.update();
-                return true;
-            });
-        }
         if (this._weatherClient._useAutoLocation) {
             this._weatherClient._updateAutoLocation();
         }
+        if (this._weatherClient.available && this._weatherClient.hasLocation) {
+            this._createNewUpdateTimeout(INT_UPDATE_INTERVAL);
+        }
+        this._weatherChangedId = this._weatherClient.connect('changed', this._update.bind(this));
         this._weatherClient.update();
         
     }
 
     destroy() {
-        if (this._weatherIntTimeoutId) {
-            Mainloop.source_remove(this._weatherIntTimeoutId);
-        }
-        if (this._weatherLongTermTimeoutId) {
-            Mainloop.source_remove(this._weatherLongTermTimeoutId);
-        }
-        if (this._weatherChangedId) {
-            this._weatherClient.disconnect(this._weatherChangedId);
-        }
+        this._weatherClient.disconnect(this._weatherChangedId);
+        this._cancelUpdateTimeout();
         this.label.destroy();
         this.icon.destroy();
         this._weatherClient = null;
-        this._weatherIntTimeoutId = null;
-        this._weatherLongTermTimeoutId = null;
         this._weatherChangedId = null;
         this.label = null;
         this.icon = null;               
     }
 
-    _update(now) {
+    _createNewUpdateTimeout(interval) {
+        this._cancelUpdateTimeout();
+        this._timeoutId = Mainloop.timeout_add_seconds(interval, () => {
+            this._weatherClient.update();
+            return true;
+        }); 
+    }
+
+    _cancelUpdateTimeout() {
+        if (this._timeoutId) {
+            Mainloop.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+    }
+
+    _update() {
         let iconName = null;
         let text = "";
         if (this._weatherClient.hasLocation && !this._weatherClient.loading) {
             let info = this._weatherClient.info;
             if (info.is_valid()) {
-                this._lastUpdate = now;
-                if (this._weatherIntTimeoutId) {
-                    // Once we have valid weather info remove the int timeout...
-                    Mainloop.source_remove(this._weatherIntTimeoutId);
-                    this._weatherIntTimeoutId = null;
-                }
-                if (!this._weatherLongTermTimeoutId) {
-                    // And start the long term timeout.
-                    this._weatherLongTermTimeoutId = Mainloop.timeout_add_seconds(LONG_TERM_UPDATE_INTERVAL, () => {
-                        this._weatherClient.update();
-                        return true;
-                    });
-                }
+                this._createNewUpdateTimeout(LONG_TERM_UPDATE_INTERVAL);
                 iconName = info.get_symbolic_icon_name();
                 text = info.get_temp_summary();
+                // "--" is not a valid temp...
+                text = text ? text.replace("--", "") : "";
             }
        }
        this.icon.icon_name = iconName;
        this.label.text = text;
-       if (!text) {
-           this.label.hide();
-       } else {
-           this.label.show();
-       }
-       if (!iconName) {
-           this.icon.hide();
-       } else {
-           this.icon.show();
-       }
+       this.icon.visible = this.label.visible = (iconName && text) ? true : false;
     }
 }
