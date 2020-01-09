@@ -1,13 +1,8 @@
 # gnome-shell-extensions-weather-in-the-clock
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
- A simple extension for GNOME Shell 3.26+ that adds an icon representing the current weather condition and the current actual temperature to the clock in the panel.
+ A simple extension for GNOME Shell 3.34+ that adds an icon representing the current weather condition and the current actual temperature to the clock in the panel. <b>GNOME Weather is required for this extension to function.</b>
 ![Screenshot](https://github.com/JasonLG1979/gnome-shell-extensions-weather-in-the-clock/blob/master/data/Screenshot.png)
-
-GNOME Weather is required.
-
-## Why GNOME Shell 3.26+?
-This extension uses native JavaScript(ES6) features incompatible with GNOME Shell < 3.26.
 
 ## Installation
 
