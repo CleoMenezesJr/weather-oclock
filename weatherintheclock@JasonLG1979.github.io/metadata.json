@@ -1,8 +1,8 @@
 {
 "uuid": "weatherintheclock@JasonLG1979.github.io",
 "name": "Weather In The Clock",
-"description": "Display the current Weather in the Clock.",
+"description": "Display the current Weather in the Clock. GNOME Weather is required for this extension to function.",
 "original-author": "JasonLG1979@github.io",
-"shell-version": ["3.26", "3.28", "3.30"],
+"shell-version": ["3.34"],
 "url": "https://github.com/JasonLG1979/gnome-shell-extension-weather-in-the-clock/"
 }

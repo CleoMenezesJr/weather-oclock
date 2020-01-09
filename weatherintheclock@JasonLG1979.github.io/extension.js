@@ -1,6 +1,6 @@
 /*
- * Weather In The Clock extension for Gnome Shell 3.26+
- * Copyright 2018 Jason Gray (JasonLG1979)
+ * Weather In The Clock extension for Gnome Shell 3.34
+ * Copyright 2020 Jason Gray (JasonLG1979)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,106 +18,117 @@
  * If this extension breaks your desktop you get to keep all of the pieces...
  */
 
-"use strict";
+const {Clutter, GLib, GObject, St} = imports.gi;
 
-const Clutter = imports.gi.Clutter;
-const St = imports.gi.St;
-const Main = imports.ui.main;
-const Mainloop = imports.mainloop;
-const PanelMenu = imports.ui.panelMenu;
-const Weather = imports.misc.weather;
-
-// Until we get valid weather info try every
-// 3 secs if a weather client is available and
-// has a valid location.
-const INT_UPDATE_INTERVAL = 3;
-
-// Update the weather every 10 min in the long term.
-const LONG_TERM_UPDATE_INTERVAL = 60 * 10;
-
-var weatherItems = null;
+let panelWeather = null;
 
 function enable() {
-    if (!weatherItems) {
-        let dateMenuLayout = Main.panel.statusArea.dateMenu.actor.get_children()[0];
-        weatherItems = new WeatherItems();
-        dateMenuLayout.insert_child_at_index(weatherItems.icon, 2);
-        dateMenuLayout.insert_child_at_index(weatherItems.label, 3);
+    if (!panelWeather) {
+        let statusArea = imports.ui.main.panel.statusArea;
+        let dateMenu = statusArea.dateMenu;
+        let weather = dateMenu._weatherItem._weatherClient;
+        let network = statusArea.aggregateMenu._network;
+        let networkIcon = network ? network._primaryIndicator : null;
+        panelWeather = new PanelWeather(weather, networkIcon);
+        dateMenu.get_first_child().insert_child_above(panelWeather, dateMenu._clockDisplay);
     }
 }
 
 function disable() {
-    if (weatherItems) {
-        weatherItems.destroy();
-        weatherItems = null;
+    if (panelWeather) {
+        panelWeather.destroy();
+        panelWeather = null;
     }
 }
 
-class WeatherItems {
-    constructor() {
-        this.icon = new St.Icon({
+const PanelWeather = GObject.registerClass({
+    GTypeName: 'PanelWeather'
+}, class PanelWeather extends St.BoxLayout {
+    _init(weather, networkIcon) {
+        super._init({
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: "system-status-icon"
+            visible: false
         });
-        this.icon.hide();
-        this.label = new St.Label({
+
+        this._weather = weather;
+        this._networkIcon = networkIcon;
+
+        this._signals = [];
+
+        this._icon = new St.Icon({
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'system-status-icon'
+        });
+
+        this.add_child(this._icon);
+
+        this._label = new St.Label({
             y_align: Clutter.ActorAlign.CENTER
         });
-        this.label.hide();
-        this._timeoutId = null;
-        this._weatherClient = new Weather.WeatherClient();
-        if (this._weatherClient._useAutoLocation) {
-            this._weatherClient._updateAutoLocation();
-        }
-        if (this._weatherClient.available && this._weatherClient.hasLocation) {
-            this._createNewUpdateTimeout(INT_UPDATE_INTERVAL);
-        }
-        this._weatherChangedId = this._weatherClient.connect('changed', this._update.bind(this));
-        this._weatherClient.update();
-        
-    }
 
-    destroy() {
-        this._weatherClient.disconnect(this._weatherChangedId);
-        this._cancelUpdateTimeout();
-        this.label.destroy();
-        this.icon.destroy();
-        this._weatherClient = null;
-        this._weatherChangedId = null;
-        this.label = null;
-        this.icon = null;               
-    }
+        this.add_child(this._label);
 
-    _createNewUpdateTimeout(interval) {
-        this._cancelUpdateTimeout();
-        this._timeoutId = Mainloop.timeout_add_seconds(interval, () => {
-            this._weatherClient.update();
-            return true;
-        }); 
-    }
+        this._pushSignal(this._weather, 'changed', this._onWeatherInfoUpdate.bind(this));
 
-    _cancelUpdateTimeout() {
-        if (this._timeoutId) {
-            Mainloop.source_remove(this._timeoutId);
-            this._timeoutId = null;
-        }
-    }
+        this._pushSignal(this, 'destroy', this._onDestroy.bind(this));
 
-    _update() {
-        let iconName = null;
-        let text = "";
-        if (this._weatherClient.hasLocation && !this._weatherClient.loading) {
-            let info = this._weatherClient.info;
-            if (info.is_valid()) {
-                this._createNewUpdateTimeout(LONG_TERM_UPDATE_INTERVAL);
-                iconName = info.get_symbolic_icon_name();
-                text = info.get_temp_summary();
-                // "--" is not a valid temp...
-                text = text ? text.replace("--", "") : "";
+        if (this._networkIcon) {
+            this._pushSignal(this._networkIcon, 'notify::icon-name', this._onNetworkIconNotifyEvents.bind(this));
+            this._pushSignal(this._networkIcon, 'notify::visible', this._onNetworkIconNotifyEvents.bind(this));
+            if (this._networkIcon.visible) {
+                this._weather.update();
+                this._StartLongTermUpdateTimeout();
             }
-       }
-       this.icon.icon_name = iconName;
-       this.label.text = text;
-       this.icon.visible = this.label.visible = (iconName && text) ? true : false;
+        } else {
+            this._weather.update();
+            this._StartLongTermUpdateTimeout();
+        }
     }
-}
+
+    _pushSignal(obj, signalName, callback) {
+        this._signals.push({
+            obj: obj,
+            signalId: obj.connect(signalName, callback)
+        });
+    }
+
+    _onWeatherInfoUpdate(weather) {
+        this._icon.icon_name = weather.info.get_symbolic_icon_name();
+        // "--" is not a valid temp...
+        this._label.text = weather.info.get_temp_summary().replace('--', '');
+        this.visible = this._icon.icon_name && this._label.text;
+    }
+
+    _onNetworkIconNotifyEvents(networkIcon) {
+        if (networkIcon.visible && !this.visible) {
+            this._weather.update();
+            this._StartLongTermUpdateTimeout();
+        } else if (!networkIcon.visible) {
+            this._canceLongTermUpdateTimeout();
+            this.visible = false;
+        }
+    }
+
+    _StartLongTermUpdateTimeout() {
+        this._canceLongTermUpdateTimeout();
+        this._weatherUpdateTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 600, () => {
+            this._weather.update();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    _canceLongTermUpdateTimeout() {
+        if (this._weatherUpdateTimeout) {
+            GLib.source_remove(this._weatherUpdateTimeout);
+        }
+        this._weatherUpdateTimeout = null;
+    }
+
+    _onDestroy() {
+        this._canceLongTermUpdateTimeout();
+        this._signals.forEach(signal => signal.obj.disconnect(signal.signalId));
+        this._signals = null;
+        this._weather = null;
+        this._networkIcon = null;
+    }
+});
