@@ -19,6 +19,7 @@
  */
 
 const {Clutter, GLib, GObject, St} = imports.gi;
+const [major, minor] = imports.misc.config.PACKAGE_VERSION.split('.').map(s => Number(s));
 
 let panelWeather = null;
 
@@ -27,7 +28,7 @@ function enable() {
         let statusArea = imports.ui.main.panel.statusArea;
         let dateMenu = statusArea.dateMenu;
         let weather = dateMenu._weatherItem._weatherClient;
-        let network = statusArea.aggregateMenu._network;
+        let network = (major < 43) ? statusArea.aggregateMenu._network : statusArea.quickSettings._network;
         let networkIcon = network ? network._primaryIndicator : null;
         panelWeather = new PanelWeather(weather, networkIcon);
         dateMenu.get_first_child().insert_child_above(panelWeather, dateMenu._clockDisplay);
