@@ -6,11 +6,10 @@ A simple extension for GNOME Shell 42+ that adds an icon representing the curren
 
 <b>GNOME Weather is required for this extension to function.</b>
 
-![Screenshot](data/Screenshot.png)
+![Screenshot](data/screenshot.png)
 
 ## Installation
-
-See the [Installation wiki page](https://github.com/JasonLG1979/gnome-shell-extensions-weather-in-the-clock/wiki/Installation)
+[<img src="data/get_it_on_gnome_extensions.png" height="100">](https://extensions.gnome.org/extension/5470/weather-oclock/)
 
 ## Like this Extension?
 
