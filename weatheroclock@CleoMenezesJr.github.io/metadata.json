@@ -1,0 +1,8 @@
+{
+  "uuid": "weatheroclock@CleoMenezesJr.github.io",
+  "name": "Weather O'Clock",
+  "description": "Display the current Weather in the Clock. GNOME Weather is required for this extension to function.",
+  "original-author": "JasonLG1979@github.io",
+  "shell-version": ["42", "43"],
+  "url": "https://github.com/CleoMenezesJr/gnome-shell-extension-weather-oclock"
+}
