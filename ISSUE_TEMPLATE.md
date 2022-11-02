@@ -4,6 +4,7 @@
 ## Distro Name & Version
 
 ## GNOME Shell Version
+<!--- Must be version 42 or higher -->
 
 ## Other Installed Extensions
 <!--- Extensions may conflict with each other -->
