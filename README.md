@@ -6,7 +6,7 @@ A simple extension for GNOME Shell 42+ that adds an icon representing the curren
 
 <b>GNOME Weather is required for this extension to function.</b>
 
-![Screenshot](data/Screenshot-2.png)
+![Screenshot](data/Screenshot.png)
 
 ## Installation
 
