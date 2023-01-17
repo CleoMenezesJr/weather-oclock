@@ -1,6 +1,6 @@
 /*
  * Weather O'Clock extension for GNOME Shell 42+
- * Copyright 2022 Cleo Menezes Jr., 2020 Jason Gray (JasonLG1979)
+ * Copyright 2022 Cleo Menezes Jr
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,30 +19,61 @@
  */
 
 const { Clutter, GLib, GObject, St } = imports.gi;
+const ExtensionUtils = imports.misc.extensionUtils;
 const [major, minor] = imports.misc.config.PACKAGE_VERSION.split(".").map((s) =>
   Number(s)
 );
 
 let panelWeather = null;
+let topBox, statusArea, dateMenu, weather, network, networkIcon, _newClockLabel;
+let timeoutID = 0;
 
 function enable() {
   if (!panelWeather) {
-    let statusArea = imports.ui.main.panel.statusArea;
-    let dateMenu = statusArea.dateMenu;
-    let weather = dateMenu._weatherItem._weatherClient;
-    let network =
+    statusArea = imports.ui.main.panel.statusArea;
+    dateMenu = statusArea.dateMenu;
+    weather = dateMenu._weatherItem._weatherClient;
+    network =
       major < 43
         ? statusArea.aggregateMenu._network
         : statusArea.quickSettings._network;
-    let networkIcon = network ? network._primaryIndicator : null;
+    networkIcon = network ? network._primaryIndicator : null;
     panelWeather = new PanelWeather(weather, networkIcon);
-    dateMenu
-      .get_first_child()
-      .insert_child_below(panelWeather, dateMenu._clockDisplay);
+
+    topBox = new St.BoxLayout({
+      style_class: "clock",
+      x_expand: true,
+    });
+
+    _newClockLabel = new St.Label({
+      y_align: Clutter.ActorAlign.CENTER,
+    });
+    _newClockLabel.text = dateMenu._clockDisplay.text;
+
+    topBox.add_child(panelWeather);
+    topBox.add_child(_newClockLabel);
+
+    dateMenu._clockDisplay
+      .get_parent()
+      .insert_child_below(topBox, dateMenu._clockDisplay);
+    dateMenu._clockDisplay.hide();
+
+    // Update _clockDisplay
+    timeoutID = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, tick);
   }
+}
+function tick() {
+  _newClockLabel.set_text(dateMenu._clockDisplay.text);
+
+  return true;
 }
 
 function disable() {
+  dateMenu._clockDisplay.get_parent().remove_child(topBox);
+  dateMenu._clockDisplay.show();
+  GLib.Source.remove(timeoutID);
+  topBox = null;
+  _newClockLabel = null
   if (panelWeather) {
     panelWeather.destroy();
     panelWeather = null;
@@ -67,7 +98,7 @@ const PanelWeather = GObject.registerClass(
 
       this._icon = new St.Icon({
         y_align: Clutter.ActorAlign.CENTER,
-        style_class: "system-status-icon",
+        icon_size: 14,
       });
 
       this.add_child(this._icon);
@@ -75,6 +106,7 @@ const PanelWeather = GObject.registerClass(
       this._label = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
       });
+      this._label.add_style_class_name("weather_label")
 
       this.add_child(this._label);
 
