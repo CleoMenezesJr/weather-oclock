@@ -42,13 +42,13 @@ function enable() {
 
     topBox = new St.BoxLayout({
       style_class: "clock",
-      x_expand: true,
     });
 
     _newClockLabel = new St.Label({
-      y_align: Clutter.ActorAlign.CENTER,
+      style_class: "clock-label",
     });
     _newClockLabel.text = dateMenu._clockDisplay.text;
+    _newClockLabel.clutter_text.y_align = Clutter.ActorAlign.CENTER;
 
     topBox.add_child(panelWeather);
     topBox.add_child(_newClockLabel);
@@ -73,7 +73,7 @@ function disable() {
   dateMenu._clockDisplay.show();
   GLib.Source.remove(timeoutID);
   topBox = null;
-  _newClockLabel = null
+  _newClockLabel = null;
   if (panelWeather) {
     panelWeather.destroy();
     panelWeather = null;
@@ -87,7 +87,6 @@ const PanelWeather = GObject.registerClass(
   class PanelWeather extends St.BoxLayout {
     _init(weather, networkIcon) {
       super._init({
-        y_align: Clutter.ActorAlign.CENTER,
         visible: false,
       });
 
@@ -97,16 +96,16 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
 
       this._icon = new St.Icon({
-        y_align: Clutter.ActorAlign.CENTER,
         icon_size: 14,
       });
 
       this.add_child(this._icon);
 
       this._label = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
+        style_class: "clock-label",
       });
-      this._label.add_style_class_name("weather_label")
+      this._label.clutter_text.y_align = Clutter.ActorAlign.CENTER;
+      this._label.add_style_class_name("weather_label");
 
       this.add_child(this._label);
 
