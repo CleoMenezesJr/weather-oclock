@@ -96,7 +96,7 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
 
       this._icon = new St.Icon({
-        icon_size: 14,
+        icon_size: 16,
       });
 
       this.add_child(this._icon);
