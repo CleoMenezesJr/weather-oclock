@@ -7,7 +7,11 @@
 <!--- Must be version 42 or higher -->
 
 ## Other Installed Extensions
-<!--- Extensions may conflict with each other -->
+<!---
+Paste the output of ls ~/.local/share/gnome-shell/extensions/
+Extensions may conflict with each other.
+This extension cannot be used with any other that modifies the Date Menu.
+-->
 
 ## Expected Behavior
 <!--- Tell us what should happen -->
