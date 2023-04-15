@@ -18,7 +18,8 @@
  * If this extension breaks your desktop you get to keep all of the pieces...
  */
 
-const { Clutter, GLib, GObject, St } = imports.gi;
+const { Clutter, GLib, GObject, GWeather, St } = imports.gi;
+const Weather = imports.misc.weather;
 const ExtensionUtils = imports.misc.extensionUtils;
 const [major, minor] = imports.misc.config.PACKAGE_VERSION.split(".").map((s) =>
   Number(s)
@@ -32,7 +33,7 @@ function enable() {
   if (!panelWeather) {
     statusArea = imports.ui.main.panel.statusArea;
     dateMenu = statusArea.dateMenu;
-    weather = dateMenu._weatherItem._weatherClient;
+    weather = new Weather.WeatherClient();
     network =
       major < 43
         ? statusArea.aggregateMenu._network
