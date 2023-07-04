@@ -12,6 +12,14 @@ A simple extension for GNOME Shell 42+ that adds an icon representing the curren
 
 [<img src="data/get_it_on_gnome_extensions.png" height="100">](https://extensions.gnome.org/extension/5470/weather-oclock/)
 
+From Source
+
+```bash
+$ git clone https://github.com/CleoMenezesJr/weather-oclock
+$ cd weather-oclock
+$ make install
+```
+
 ## Like this Extension?
 
 If you want to help me with this, consider buying me a coffee. :)
