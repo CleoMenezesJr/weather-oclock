@@ -73,6 +73,7 @@ export default class weatherOClock {
     GLib.Source.remove(timeoutID);
     topBox = null;
     _newClockLabel = null;
+    weather = null;
     if (panelWeather) {
       panelWeather.destroy();
       panelWeather = null;
