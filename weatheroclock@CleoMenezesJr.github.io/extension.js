@@ -1,5 +1,5 @@
 /*
- * Weather O'Clock extension for GNOME Shell 42+
+ * Weather O'Clock extension for GNOME Shell 45+
  * Copyright 2022-2023 Cleo Menezes Jr., 2020 Jason Gray (JasonLG1979)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,66 +18,65 @@
  * If this extension breaks your desktop you get to keep all of the pieces...
  */
 
-const { Clutter, GLib, GObject, GWeather, St } = imports.gi;
-const Weather = imports.misc.weather;
-const ExtensionUtils = imports.misc.extensionUtils;
-const [major, minor] = imports.misc.config.PACKAGE_VERSION.split(".").map((s) =>
-  Number(s)
-);
+import Clutter from "gi://Clutter";
+import GLib from "gi://GLib";
+import GObject from "gi://GObject";
+import St from "gi://St";
+import * as Weather from "resource:///org/gnome/shell/misc/weather.js";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 let panelWeather = null;
 let topBox, statusArea, dateMenu, weather, network, networkIcon, _newClockLabel;
 let timeoutID = 0;
 
-function enable() {
-  if (!panelWeather) {
-    statusArea = imports.ui.main.panel.statusArea;
-    dateMenu = statusArea.dateMenu;
-    weather = new Weather.WeatherClient();
-    network =
-      major < 43
-        ? statusArea.aggregateMenu._network
-        : statusArea.quickSettings._network;
-    networkIcon = network ? network._primaryIndicator : null;
-    panelWeather = new PanelWeather(weather, networkIcon);
+export default class weatherOClock {
+  enable() {
+    if (!panelWeather) {
+      statusArea = Main.panel.statusArea;
+      dateMenu = statusArea.dateMenu;
+      weather = new Weather.WeatherClient();
+      network = Main.panel._network;
+      networkIcon = network ? network._primaryIndicator : null;
+      panelWeather = new PanelWeather(weather, networkIcon);
 
-    topBox = new St.BoxLayout({
-      style_class: "clock",
-    });
+      topBox = new St.BoxLayout({
+        style_class: "clock",
+      });
 
-    _newClockLabel = new St.Label({
-      style_class: "clock-label",
-    });
-    _newClockLabel.text = dateMenu._clockDisplay.text;
-    _newClockLabel.clutter_text.y_align = Clutter.ActorAlign.CENTER;
+      _newClockLabel = new St.Label({
+        style_class: "clock-label",
+      });
+      _newClockLabel.text = dateMenu._clockDisplay.text;
+      _newClockLabel.clutter_text.y_align = Clutter.ActorAlign.CENTER;
 
-    topBox.add_child(panelWeather);
-    topBox.add_child(_newClockLabel);
+      topBox.add_child(panelWeather);
+      topBox.add_child(_newClockLabel);
 
-    dateMenu._clockDisplay
-      .get_parent()
-      .insert_child_below(topBox, dateMenu._clockDisplay);
-    dateMenu._clockDisplay.hide();
+      dateMenu._clockDisplay
+        .get_parent()
+        .insert_child_below(topBox, dateMenu._clockDisplay);
+      dateMenu._clockDisplay.hide();
 
-    // Update _clockDisplay
-    timeoutID = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, tick);
+      // Update _clockDisplay
+      timeoutID = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, this.tick);
+    }
   }
-}
-function tick() {
-  _newClockLabel.set_text(dateMenu._clockDisplay.text);
 
-  return true;
-}
+  tick() {
+    _newClockLabel.set_text(dateMenu._clockDisplay.text);
+    return true;
+  }
 
-function disable() {
-  dateMenu._clockDisplay.get_parent().remove_child(topBox);
-  dateMenu._clockDisplay.show();
-  GLib.Source.remove(timeoutID);
-  topBox = null;
-  _newClockLabel = null;
-  if (panelWeather) {
-    panelWeather.destroy();
-    panelWeather = null;
+  disable() {
+    dateMenu._clockDisplay.get_parent().remove_child(topBox);
+    dateMenu._clockDisplay.show();
+    GLib.Source.remove(timeoutID);
+    topBox = null;
+    _newClockLabel = null;
+    if (panelWeather) {
+      panelWeather.destroy();
+      panelWeather = null;
+    }
   }
 }
 
@@ -113,7 +112,7 @@ const PanelWeather = GObject.registerClass(
       this._pushSignal(
         this._weather,
         "changed",
-        this._onWeatherInfoUpdate.bind(this)
+        this._onWeatherInfoUpdate.bind(this),
       );
 
       this._pushSignal(this, "destroy", this._onDestroy.bind(this));
@@ -122,12 +121,12 @@ const PanelWeather = GObject.registerClass(
         this._pushSignal(
           this._networkIcon,
           "notify::icon-name",
-          this._onNetworkIconNotifyEvents.bind(this)
+          this._onNetworkIconNotifyEvents.bind(this),
         );
         this._pushSignal(
           this._networkIcon,
           "notify::visible",
-          this._onNetworkIconNotifyEvents.bind(this)
+          this._onNetworkIconNotifyEvents.bind(this),
         );
         if (this._networkIcon.visible) {
           this._weather.update();
@@ -171,7 +170,7 @@ const PanelWeather = GObject.registerClass(
         () => {
           this._weather.update();
           return GLib.SOURCE_CONTINUE;
-        }
+        },
       );
     }
 
@@ -189,5 +188,5 @@ const PanelWeather = GObject.registerClass(
       this._weather = null;
       this._networkIcon = null;
     }
-  }
+  },
 );
