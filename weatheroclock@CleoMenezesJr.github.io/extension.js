@@ -1,6 +1,6 @@
 /*
  * Weather O'Clock extension for GNOME Shell 45+
- * Copyright 2022-2023 Cleo Menezes Jr., 2020 Jason Gray (JasonLG1979)
+ * Copyright 2022-2024 Cleo Menezes Jr., 2020 Jason Gray (JasonLG1979)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
