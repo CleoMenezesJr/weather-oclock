@@ -97,7 +97,7 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
 
       this._icon = new St.Icon({
-        icon_size: 16,
+        style_class: 'system-status-icon',
       });
 
       this.add_child(this._icon);
