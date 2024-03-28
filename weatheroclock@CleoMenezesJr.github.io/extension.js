@@ -26,8 +26,7 @@ import * as Weather from "resource:///org/gnome/shell/misc/weather.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 let panelWeather = null;
-let topBox, statusArea, dateMenu, weather, network, networkIcon, _newClockLabel;
-let timeoutID = 0;
+let topBox, statusArea, dateMenu, weather, network, networkIcon;
 
 export default class weatherOClock {
   enable() {
@@ -43,36 +42,26 @@ export default class weatherOClock {
         style_class: "clock",
       });
 
-      _newClockLabel = new St.Label({
-        style_class: "clock-label",
-      });
-      _newClockLabel.text = dateMenu._clockDisplay.text;
-      _newClockLabel.clutter_text.y_align = Clutter.ActorAlign.CENTER;
-
       topBox.add_child(panelWeather);
-      topBox.add_child(_newClockLabel);
 
       dateMenu._clockDisplay
         .get_parent()
-        .insert_child_below(topBox, dateMenu._clockDisplay);
-      dateMenu._clockDisplay.hide();
+        .replace_child(dateMenu._clockDisplay, topBox);
 
-      // Update _clockDisplay
-      timeoutID = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, this.tick);
+      dateMenu._clockDisplay.remove_style_class_name("clock");
+      topBox.add_child(dateMenu._clockDisplay);
     }
   }
 
-  tick() {
-    _newClockLabel.set_text(dateMenu._clockDisplay.text);
-    return true;
-  }
-
   disable() {
-    dateMenu._clockDisplay.get_parent().remove_child(topBox);
-    dateMenu._clockDisplay.show();
-    GLib.Source.remove(timeoutID);
+    topBox.remove_child(dateMenu._clockDisplay);
+    dateMenu._clockDisplay.add_style_class_name("clock");
+
+    topBox
+      .get_parent()
+      .replace_child(topBox, dateMenu._clockDisplay);
+  
     topBox = null;
-    _newClockLabel = null;
     weather = null;
     if (panelWeather) {
       panelWeather.destroy();
