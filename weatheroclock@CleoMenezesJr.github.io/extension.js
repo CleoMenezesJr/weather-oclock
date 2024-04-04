@@ -60,7 +60,7 @@ export default class weatherOClock {
     topBox
       .get_parent()
       .replace_child(topBox, dateMenu._clockDisplay);
-  
+
     topBox = null;
     weather = null;
     if (panelWeather) {
@@ -78,6 +78,7 @@ const PanelWeather = GObject.registerClass(
     _init(weather, networkIcon) {
       super._init({
         visible: false,
+        y_align: Clutter.ActorAlign.CENTER,
       });
 
       this._weather = weather;
@@ -86,12 +87,14 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
 
       this._icon = new St.Icon({
-        style_class: 'system-status-icon',
+        icon_size: 16,
+        y_align: Clutter.ActorAlign.CENTER,
       });
 
       this.add_child(this._icon);
 
       this._label = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         style_class: "clock-label",
       });
       this._label.clutter_text.y_align = Clutter.ActorAlign.CENTER;
