@@ -87,8 +87,8 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
 
       this._icon = new St.Icon({
-        icon_size: 16,
         y_align: Clutter.ActorAlign.CENTER,
+        style_class: "system-status-icon custom-weather-icon-spacing",
       });
 
       this.add_child(this._icon);

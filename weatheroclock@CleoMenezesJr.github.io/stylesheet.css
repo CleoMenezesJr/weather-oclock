@@ -2,3 +2,8 @@
   margin-right: 0.7em;
   margin-left: 0.3em;
 }
+
+.custom-weather-icon-spacing {
+  padding: 0;
+  margin: 0;
+}
