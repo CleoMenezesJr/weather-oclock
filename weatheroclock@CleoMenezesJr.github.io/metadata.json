@@ -12,5 +12,6 @@
     "kofi": "cleomenezesjr",
     "paypal": "CleoMenezesJr"
   },
+  "settings-schema": "org.gnome.shell.extensions.weather-oclock",
   "version-name": "47.0"
 }
