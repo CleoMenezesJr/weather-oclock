@@ -2,7 +2,9 @@
   "uuid": "weatheroclock@CleoMenezesJr.github.io",
   "name": "Weather O'Clock",
   "description": "Display the current weather inside the pill next to the clock. GNOME Weather is required for this extension to work.",
-  "shell-version": ["46"],
+  "shell-version": [
+    "47"
+  ],
   "url": "https://github.com/CleoMenezesJr/weather-oclock",
   "original-author": "JasonLG1979@github.io",
   "donations": {
@@ -10,5 +12,6 @@
     "kofi": "cleomenezesjr",
     "paypal": "CleoMenezesJr"
   },
-  "version-name": "46.2"
+  "settings-schema": "org.gnome.shell.extensions.weather-oclock",
+  "version-name": "47.0"
 }

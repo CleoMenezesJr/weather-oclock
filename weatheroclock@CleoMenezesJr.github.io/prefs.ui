@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="auto-activities">
+  <object class="AdwPreferencesPage" id="MainWidget">
+    <property name="title" translatable="yes">Preferences</property>
+    <child>
+      <object class="AdwPreferencesGroup">
+        <property name="title" translatable="yes">General</property>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Weather After Clock</property>
+            <property name="subtitle" translatable="yes">Widget to the right of the clock</property>
+            <property name="activatable-widget">WeatherAfterClock</property>
+            <child>
+              <object class="GtkSwitch" id="WeatherAfterClock">
+                <property name="valign">center</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

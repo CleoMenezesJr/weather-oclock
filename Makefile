@@ -13,6 +13,8 @@ INSTALLNAME = weatheroclock@CleoMenezesJr.github.io
 default: build
 
 .PHONY: build
+build:
+	glib-compile-schemas ./weatheroclock@CleoMenezesJr.github.io/schemas
 
 .PHONY: install
 install: build
