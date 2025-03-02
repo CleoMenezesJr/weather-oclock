@@ -173,7 +173,7 @@ const PanelWeather = GObject.registerClass(
       if (!weather.loading) {
         this._icon.icon_name = weather.info.get_symbolic_icon_name();
         // "--" is not a valid temp...
-        this._label.text = weather.info.get_temp_summary().replace("--", "");
+        this._label.text = weather.info.get_temp_summary().replace("--", "").replace(" ", "");
         this.visible = this._icon.icon_name && this._label.text;
       }
     }
