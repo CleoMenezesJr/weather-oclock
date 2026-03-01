@@ -25,6 +25,7 @@ import St from "gi://St";
 import * as Weather from "resource:///org/gnome/shell/misc/weather.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Spinner } from 'resource:///org/gnome/shell/ui/animation.js';
 
 export default class WeatherOClock extends Extension {
   constructor(metadata) {
@@ -43,7 +44,6 @@ export default class WeatherOClock extends Extension {
     const networkIcon = network ? network._primaryIndicator : null;
     const weather = new Weather.WeatherClient();
 
-    // Snapshot the original widget so disable() can restore it faithfully.
     this._originalClockDisplay = dateMenu._clockDisplay;
     this._panelWeather = new PanelWeather(weather, networkIcon);
 
@@ -126,81 +126,115 @@ const PanelWeather = GObject.registerClass(
 
       this._weather = weather;
       this._networkIcon = networkIcon;
-
       this._signals = [];
+      this._weatherUpdateTimeout = null;
+      this._hasData = false;
 
       this._icon = new St.Icon({
         y_align: Clutter.ActorAlign.CENTER,
         style_class: "system-status-icon custom-weather-icon-spacing",
       });
-
       this.add_child(this._icon);
+
+      this._spinner = new Spinner(16, { animate: false, hideOnStop: true });
+      this._spinner.y_align = Clutter.ActorAlign.CENTER;
+      this.add_child(this._spinner);
 
       this._label = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         style_class: "clock-label weather_label",
       });
       this._label.clutter_text.y_align = Clutter.ActorAlign.CENTER;
-
       this.add_child(this._label);
 
-      this._pushSignal(
-        this._weather,
-        "changed",
-        this._onWeatherInfoUpdate.bind(this),
-      );
-
-      this._pushSignal(this, "destroy", this._onDestroy.bind(this));
+      this._pushSignal(this._weather, "changed", this._onWeatherInfoUpdate.bind(this));
 
       if (this._networkIcon) {
-        this._pushSignal(
-          this._networkIcon,
-          "notify::icon-name",
-          this._onNetworkIconNotifyEvents.bind(this),
-        );
-        this._pushSignal(
-          this._networkIcon,
-          "notify::visible",
-          this._onNetworkIconNotifyEvents.bind(this),
-        );
+        this._pushSignal(this._networkIcon, "notify::icon-name", this._onNetworkIconNotifyEvents.bind(this));
+        this._pushSignal(this._networkIcon, "notify::visible", this._onNetworkIconNotifyEvents.bind(this));
         if (this._networkIcon.visible) {
           this._weather.update();
-          this._StartLongTermUpdateTimeout();
+          this._startLongTermUpdateTimeout();
+        } else {
+          this._showOffline();
         }
       } else {
         this._weather.update();
-        this._StartLongTermUpdateTimeout();
+        this._startLongTermUpdateTimeout();
       }
     }
 
     _pushSignal(obj, signalName, callback) {
-      this._signals.push({
-        obj: obj,
-        signalId: obj.connect(signalName, callback),
-      });
+      this._signals.push({ obj, signalId: obj.connect(signalName, callback) });
+    }
+
+    destroy() {
+      this._cancelLongTermUpdateTimeout();
+      this._spinner.stop();
+      this._signals.forEach((s) => s.obj.disconnect(s.signalId));
+      this._signals = null;
+      this._weather = null;
+      this._networkIcon = null;
+      super.destroy();
+    }
+
+    _startSpinner() {
+      this._icon.visible = false;
+      this._label.visible = false;
+      this._spinner.play();
+      this.visible = true;
+    }
+
+    _stopSpinner() {
+      this._spinner.stop();
+      this._icon.visible = true;
+      this._label.visible = true;
+    }
+
+    _showOffline() {
+      this._stopSpinner();
+      this._icon.icon_name = "network-offline-symbolic";
+      this._label.visible = false;
+      this.visible = true;
     }
 
     _onWeatherInfoUpdate(weather) {
-      if (!weather.loading) {
-        this._icon.icon_name = weather.info.get_symbolic_icon_name();
-        // "--" is not a valid temp...
-        this._label.text = weather.info.get_temp_summary().replace("--", "");
-        this.visible = this._icon.icon_name && this._label.text;
-      }
-    }
+      if (!this._weather) return;
 
-    _onNetworkIconNotifyEvents(networkIcon) {
-      if (networkIcon.visible && !this.visible) {
-        this._weather.update();
-        this._StartLongTermUpdateTimeout();
-      } else if (!networkIcon.visible) {
-        this._canceLongTermUpdateTimeout();
+      if (weather.loading) {
+        this._startSpinner();
+        return;
+      }
+
+      this._stopSpinner();
+      const iconName = weather.info.get_symbolic_icon_name();
+      // "--" is not a valid temp...
+      const temp = weather.info.get_temp_summary().replace("--", "");
+
+      if (iconName && temp) {
+        this._icon.icon_name = iconName;
+        this._label.text = temp;
+        this._label.visible = true;
+        this.visible = true;
+        this._hasData = true;
+      } else {
         this.visible = false;
       }
     }
 
-    _StartLongTermUpdateTimeout() {
-      this._canceLongTermUpdateTimeout();
+    _onNetworkIconNotifyEvents(networkIcon) {
+      if (networkIcon.visible) {
+        this._weather.update();
+        this._startLongTermUpdateTimeout();
+      } else {
+        this._cancelLongTermUpdateTimeout();
+        if (!this._hasData)
+          this._showOffline();
+      }
+    }
+
+    _startLongTermUpdateTimeout() {
+      this._cancelLongTermUpdateTimeout();
       this._weatherUpdateTimeout = GLib.timeout_add_seconds(
         GLib.PRIORITY_LOW,
         600,
@@ -211,19 +245,11 @@ const PanelWeather = GObject.registerClass(
       );
     }
 
-    _canceLongTermUpdateTimeout() {
+    _cancelLongTermUpdateTimeout() {
       if (this._weatherUpdateTimeout) {
         GLib.source_remove(this._weatherUpdateTimeout);
+        this._weatherUpdateTimeout = null;
       }
-      this._weatherUpdateTimeout = null;
-    }
-
-    _onDestroy() {
-      this._canceLongTermUpdateTimeout();
-      this._signals.forEach((signal) => signal.obj.disconnect(signal.signalId));
-      this._signals = null;
-      this._weather = null;
-      this._networkIcon = null;
     }
   },
 );
