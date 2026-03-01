@@ -2,9 +2,9 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A simple extension for GNOME Shell 42+ that adds an icon representing the current weather condition and the current actual temperature inside the pill next to the clock.
+A simple extension for GNOME Shell 45+ that adds an icon representing the current weather condition and the current actual temperature inside the pill next to the clock.
 
-<b>GNOME Weather is required for this extension to function.</b>
+**GNOME Weather is required for this extension to function.**
 
 ![Screenshot](data/screenshot.png)
 
