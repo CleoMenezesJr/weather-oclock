@@ -77,16 +77,15 @@ export default class WeatherOClock extends Extension {
     if (clockDisplay.get_parent() === this._topBox)
       this._topBox.remove_child(clockDisplay);
 
-    this._topBox.get_parent()?.replace_child(this._topBox, clockDisplay);
-
-    this._topBox.destroy();
-    this._topBox = null;
-    this._originalClockDisplay = null;
-
     if (this._panelWeather) {
       this._panelWeather.destroy();
       this._panelWeather = null;
     }
+
+    this._topBox.get_parent()?.replace_child(this._topBox, clockDisplay);
+    this._topBox.destroy();
+    this._topBox = null;
+    this._originalClockDisplay = null;
   }
 
   _addWidget() {
@@ -120,7 +119,7 @@ const PanelWeather = GObject.registerClass(
   class PanelWeather extends St.BoxLayout {
     _init(weather, networkIcon) {
       super._init({
-        visible: false,
+        opacity: 0,
         y_align: Clutter.ActorAlign.CENTER,
       });
 
@@ -134,11 +133,17 @@ const PanelWeather = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         style_class: "system-status-icon custom-weather-icon-spacing",
       });
-      this.add_child(this._icon);
 
       this._spinner = new Spinner(16, { animate: false, hideOnStop: true });
       this._spinner.y_align = Clutter.ActorAlign.CENTER;
-      this.add_child(this._spinner);
+
+      const iconStack = new St.Widget({
+        y_align: Clutter.ActorAlign.CENTER,
+        layout_manager: new Clutter.BinLayout(),
+      });
+      iconStack.add_child(this._icon);
+      iconStack.add_child(this._spinner);
+      this.add_child(iconStack);
 
       this._label = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -169,6 +174,7 @@ const PanelWeather = GObject.registerClass(
     }
 
     destroy() {
+      this.remove_all_transitions();
       this._cancelLongTermUpdateTimeout();
       this._spinner.stop();
       this._signals.forEach((s) => s.obj.disconnect(s.signalId));
@@ -178,47 +184,77 @@ const PanelWeather = GObject.registerClass(
       super.destroy();
     }
 
-    _startSpinner() {
-      this._icon.visible = false;
-      this._label.visible = false;
-      this._spinner.play();
-      this.visible = true;
+    _crossfade(applyFn) {
+      const doTransition = () => {
+        applyFn();
+        this.ease({
+          opacity: 255,
+          duration: 500,
+          mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+      };
+
+      if (this.opacity === 0) {
+        doTransition();
+        return;
+      }
+
+      this.ease({
+        opacity: 0,
+        duration: 250,
+        mode: Clutter.AnimationMode.EASE_IN_QUAD,
+        onComplete: () => {
+          if (!this._weather) return;
+          doTransition();
+        },
+      });
     }
 
-    _stopSpinner() {
-      this._spinner.stop();
-      this._icon.visible = true;
-      this._label.visible = true;
+    _startSpinner() {
+      this._crossfade(() => {
+        this._spinner.play();
+        this._icon.hide();
+        this._label.hide();
+      });
+    }
+
+    _showWeather(iconName, temp) {
+      this._crossfade(() => {
+        this._spinner.stop();
+        this._icon.icon_name = iconName;
+        this._icon.show();
+        this._label.text = temp;
+        this._label.show();
+      });
     }
 
     _showOffline() {
-      this._stopSpinner();
-      this._icon.icon_name = "network-offline-symbolic";
-      this._label.visible = false;
-      this.visible = true;
+      this._crossfade(() => {
+        this._spinner.stop();
+        this._icon.icon_name = "network-offline-symbolic";
+        this._icon.show();
+        this._label.hide();
+      });
     }
 
     _onWeatherInfoUpdate(weather) {
       if (!this._weather) return;
 
       if (weather.loading) {
-        this._startSpinner();
+        if (!this._hasData)
+          this._startSpinner();
         return;
       }
 
-      this._stopSpinner();
       const iconName = weather.info.get_symbolic_icon_name();
       // "--" is not a valid temp...
       const temp = weather.info.get_temp_summary().replace("--", "");
 
       if (iconName && temp) {
-        this._icon.icon_name = iconName;
-        this._label.text = temp;
-        this._label.visible = true;
-        this.visible = true;
+        this._showWeather(iconName, temp);
         this._hasData = true;
-      } else {
-        this.visible = false;
+      } else if (!this._hasData) {
+        this.ease({ opacity: 0, duration: 250, mode: Clutter.AnimationMode.EASE_IN_QUAD });
       }
     }
 
@@ -251,5 +287,6 @@ const PanelWeather = GObject.registerClass(
         this._weatherUpdateTimeout = null;
       }
     }
+
   },
 );
