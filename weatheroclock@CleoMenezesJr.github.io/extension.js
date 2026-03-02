@@ -219,6 +219,11 @@ const PanelWeather = GObject.registerClass(
     }
 
     _showWeather(iconName, temp) {
+      if (this._hasData) {
+        this._icon.icon_name = iconName;
+        this._label.text = temp;
+        return;
+      }
       this._crossfade(() => {
         this._spinner.stop();
         this._icon.icon_name = iconName;
