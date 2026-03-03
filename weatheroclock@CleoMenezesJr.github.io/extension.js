@@ -186,7 +186,30 @@ const PanelWeather = GObject.registerClass(
 
     _crossfade(applyFn) {
       const doTransition = () => {
+        const parent = this.get_parent();
+        const [, fromWidth] = this.get_preferred_width(-1);
+
         applyFn();
+
+        const [, toWidth] = this.get_preferred_width(-1);
+        const delta = toWidth - fromWidth;
+
+        if (parent && Math.abs(delta) > 2) {
+          const children = parent.get_children();
+          const myIndex = children.indexOf(this);
+          children.forEach((child, i) => {
+            if (child === this) return;
+            const sign = myIndex < i ? -1 : 1;
+            child.remove_all_transitions();
+            child.translation_x = sign * delta / 2;
+            child.ease({
+              translation_x: 0,
+              duration: 500,
+              mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
+          });
+        }
+
         this.ease({
           opacity: 255,
           duration: 500,
