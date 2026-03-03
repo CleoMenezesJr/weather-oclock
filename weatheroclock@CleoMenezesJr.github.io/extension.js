@@ -119,7 +119,7 @@ const PanelWeather = GObject.registerClass(
   class PanelWeather extends St.BoxLayout {
     _init(weather, networkIcon) {
       super._init({
-        opacity: 0,
+        visible: false,
         y_align: Clutter.ActorAlign.CENTER,
       });
 
@@ -127,7 +127,10 @@ const PanelWeather = GObject.registerClass(
       this._networkIcon = networkIcon;
       this._signals = [];
       this._weatherUpdateTimeout = null;
+      this._retryTimeout = null;
+      this._retryCount = 0;
       this._hasData = false;
+      this._notified = false;
 
       this._icon = new St.Icon({
         y_align: Clutter.ActorAlign.CENTER,
@@ -157,15 +160,12 @@ const PanelWeather = GObject.registerClass(
       if (this._networkIcon) {
         this._pushSignal(this._networkIcon, "notify::icon-name", this._onNetworkIconNotifyEvents.bind(this));
         this._pushSignal(this._networkIcon, "notify::visible", this._onNetworkIconNotifyEvents.bind(this));
-        if (this._networkIcon.visible) {
+        if (this._networkIcon.visible)
           this._weather.update();
-          this._startLongTermUpdateTimeout();
-        } else {
+        else
           this._showOffline();
-        }
       } else {
         this._weather.update();
-        this._startLongTermUpdateTimeout();
       }
     }
 
@@ -176,6 +176,7 @@ const PanelWeather = GObject.registerClass(
     destroy() {
       this.remove_all_transitions();
       this._cancelLongTermUpdateTimeout();
+      this._cancelRetry();
       this._spinner.stop();
       this._signals.forEach((s) => s.obj.disconnect(s.signalId));
       this._signals = null;
@@ -187,9 +188,11 @@ const PanelWeather = GObject.registerClass(
     _crossfade(applyFn) {
       const doTransition = () => {
         const parent = this.get_parent();
-        const [, fromWidth] = this.get_preferred_width(-1);
+        const fromWidth = this.visible ? this.width : 0;
 
         applyFn();
+        this.opacity = 0;
+        this.visible = true;
 
         const [, toWidth] = this.get_preferred_width(-1);
         const delta = toWidth - fromWidth;
@@ -217,7 +220,7 @@ const PanelWeather = GObject.registerClass(
         });
       };
 
-      if (this.opacity === 0) {
+      if (!this.visible || this.opacity === 0) {
         doTransition();
         return;
       }
@@ -228,6 +231,7 @@ const PanelWeather = GObject.registerClass(
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
         onComplete: () => {
           if (!this._weather) return;
+          this.visible = false;
           doTransition();
         },
       });
@@ -279,22 +283,75 @@ const PanelWeather = GObject.registerClass(
       const temp = weather.info.get_temp_summary().replace("--", "");
 
       if (iconName && temp) {
+        this._cancelRetry();
+        this._retryCount = 0;
         this._showWeather(iconName, temp);
-        this._hasData = true;
+        if (!this._hasData) {
+          this._hasData = true;
+          this._startLongTermUpdateTimeout();
+        }
       } else if (!this._hasData) {
-        this.ease({ opacity: 0, duration: 250, mode: Clutter.AnimationMode.EASE_IN_QUAD });
+        if (weather.info.is_valid()) {
+          if (this._retryCount < 5) {
+            this._scheduleRetry();
+          } else {
+            this._hideWidget();
+          }
+        } else {
+          this._hideWidget();
+          if (!this._notified) {
+            this._notified = true;
+            Main.notify(
+              'Weather O\'Clock',
+              'GNOME Weather is required. Please install it for weather information to appear.',
+            );
+          }
+        }
       }
     }
 
     _onNetworkIconNotifyEvents(networkIcon) {
       if (networkIcon.visible) {
+        this._retryCount = 0;
         this._weather.update();
-        this._startLongTermUpdateTimeout();
+        if (this._hasData)
+          this._startLongTermUpdateTimeout();
       } else {
         this._cancelLongTermUpdateTimeout();
+        this._cancelRetry();
         if (!this._hasData)
           this._showOffline();
       }
+    }
+
+    _scheduleRetry() {
+      if (this._retryTimeout) return;
+      this._retryCount++;
+      if (this._spinner.get_content() === null)
+        this._startSpinner();
+      this._retryTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 30, () => {
+        this._retryTimeout = null;
+        if (this._weather) this._weather.update();
+        return GLib.SOURCE_REMOVE;
+      });
+    }
+
+    _cancelRetry() {
+      if (this._retryTimeout) {
+        GLib.source_remove(this._retryTimeout);
+        this._retryTimeout = null;
+      }
+    }
+
+    _hideWidget() {
+      if (!this.visible) return;
+      this._spinner.stop();
+      this.ease({
+        opacity: 0,
+        duration: 250,
+        mode: Clutter.AnimationMode.EASE_IN_QUAD,
+        onComplete: () => { this.visible = false; },
+      });
     }
 
     _startLongTermUpdateTimeout() {
