@@ -131,6 +131,7 @@ const PanelWeather = GObject.registerClass(
       this._retryCount = 0;
       this._hasData = false;
       this._notified = false;
+      this._gaveUp = false;
 
       this._icon = new St.Icon({
         y_align: Clutter.ActorAlign.CENTER,
@@ -273,7 +274,7 @@ const PanelWeather = GObject.registerClass(
       if (!this._weather) return;
 
       if (weather.loading) {
-        if (!this._hasData)
+        if (!this._hasData && !this._gaveUp)
           this._startSpinner();
         return;
       }
@@ -285,21 +286,19 @@ const PanelWeather = GObject.registerClass(
       if (iconName && temp) {
         this._cancelRetry();
         this._retryCount = 0;
+        this._gaveUp = false;
         this._showWeather(iconName, temp);
         if (!this._hasData) {
           this._hasData = true;
           this._startLongTermUpdateTimeout();
         }
       } else if (!this._hasData) {
-        if (weather.info.is_valid()) {
-          if (this._retryCount < 5) {
-            this._scheduleRetry();
-          } else {
-            this._hideWidget();
-          }
+        if (this._retryCount < 5) {
+          this._scheduleRetry();
         } else {
+          this._gaveUp = true;
           this._hideWidget();
-          if (!this._notified) {
+          if (!weather.info.is_valid() && !this._notified) {
             this._notified = true;
             Main.notify(
               'Weather O\'Clock',
@@ -313,13 +312,14 @@ const PanelWeather = GObject.registerClass(
     _onNetworkIconNotifyEvents(networkIcon) {
       if (networkIcon.visible) {
         this._retryCount = 0;
+        this._gaveUp = false;
         this._weather.update();
         if (this._hasData)
           this._startLongTermUpdateTimeout();
       } else {
         this._cancelLongTermUpdateTimeout();
         this._cancelRetry();
-        if (!this._hasData)
+        if (!this._hasData && !this._gaveUp)
           this._showOffline();
       }
     }
@@ -346,6 +346,7 @@ const PanelWeather = GObject.registerClass(
     _hideWidget() {
       if (!this.visible) return;
       this._spinner.stop();
+      this.remove_all_transitions();
       this.ease({
         opacity: 0,
         duration: 250,
