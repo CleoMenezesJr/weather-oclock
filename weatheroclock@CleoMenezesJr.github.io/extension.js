@@ -293,6 +293,7 @@ const PanelWeather = GObject.registerClass(
           this._startLongTermUpdateTimeout();
         }
       } else if (!this._hasData) {
+        if (this._networkIcon && !this._networkIcon.visible) return;
         if (this._retryCount < 5) {
           this._scheduleRetry();
         } else {
