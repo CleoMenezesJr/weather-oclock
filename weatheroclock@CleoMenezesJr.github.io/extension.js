@@ -73,6 +73,8 @@ export default class WeatherOClock extends Extension {
     clockDisplay.remove_style_class_name("label-right-margin");
     clockDisplay.remove_style_class_name("label-left-margin");
     clockDisplay.add_style_class_name("clock");
+    clockDisplay.remove_all_transitions();
+    clockDisplay.translation_x = 0;
 
     if (clockDisplay.get_parent() === this._topBox)
       this._topBox.remove_child(clockDisplay);
