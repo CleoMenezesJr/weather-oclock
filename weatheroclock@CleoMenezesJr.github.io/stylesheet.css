@@ -2,12 +2,12 @@
   margin-left: 0.3em;
 }
 
-.label-right-margin {
-  margin-right: 0.7em;
+.weather-after-clock {
+  margin-left: 0.7em;
 }
 
-.label-left-margin {
-  margin-left: 0.7em;
+.weather-before-clock {
+  margin-right: 0.7em;
 }
 
 .custom-weather-icon-spacing {
