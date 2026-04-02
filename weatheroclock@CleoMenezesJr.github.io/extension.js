@@ -31,7 +31,8 @@ export default class WeatherOClock extends Extension {
   constructor(metadata) {
     super(metadata);
 
-    this._clockDisplay = null;
+    this._topBox = null;
+    this._originalClockDisplay = null;
     this._panelWeather = null;
     this._positionChangeListener = null;
     this._settings = null;
@@ -43,8 +44,15 @@ export default class WeatherOClock extends Extension {
     const networkIcon = network ? network._primaryIndicator : null;
     const weather = new Weather.WeatherClient();
 
-    this._clockDisplay = dateMenu._clockDisplay;
-    this._panelWeather = new PanelWeather(weather, networkIcon, this._clockDisplay);
+    this._originalClockDisplay = dateMenu._clockDisplay;
+    this._panelWeather = new PanelWeather(weather, networkIcon, this._originalClockDisplay);
+
+    this._topBox = new St.BoxLayout({ style_class: "clock" });
+
+    this._originalClockDisplay.remove_style_class_name("clock");
+    this._originalClockDisplay
+      .get_parent()
+      .replace_child(this._originalClockDisplay, this._topBox);
 
     this._settings = this.getSettings();
     this._positionChangeListener = this._settings.connect(
@@ -61,34 +69,44 @@ export default class WeatherOClock extends Extension {
     }
     this._settings = null;
 
+    const clockDisplay = this._originalClockDisplay;
+    clockDisplay.remove_all_transitions();
+    clockDisplay.translation_x = 0;
+    clockDisplay.add_style_class_name("clock");
+
+    if (clockDisplay.get_parent() === this._topBox)
+      this._topBox.remove_child(clockDisplay);
+
     if (this._panelWeather) {
       this._panelWeather.destroy();
       this._panelWeather = null;
     }
 
-    if (this._clockDisplay) {
-      this._clockDisplay.remove_all_transitions();
-      this._clockDisplay.translation_x = 0;
-      this._clockDisplay = null;
-    }
+    this._topBox.get_parent()?.replace_child(this._topBox, clockDisplay);
+    this._topBox.destroy();
+    this._topBox = null;
+    this._originalClockDisplay = null;
   }
 
   _addWidget() {
-    const clockDisplay = this._clockDisplay;
-    const parent = clockDisplay.get_parent();
+    const clockDisplay = this._originalClockDisplay;
 
-    if (this._panelWeather.get_parent())
-      this._panelWeather.get_parent().remove_child(this._panelWeather);
+    if (clockDisplay.get_parent() === this._topBox)
+      this._topBox.remove_child(clockDisplay);
+    if (this._panelWeather.get_parent() === this._topBox)
+      this._topBox.remove_child(this._panelWeather);
 
     this._panelWeather.remove_style_class_name("weather-before-clock");
     this._panelWeather.remove_style_class_name("weather-after-clock");
 
     const isWeatherAfterClock = this._settings.get_boolean("weather-after-clock");
     if (isWeatherAfterClock) {
-      parent.insert_child_above(this._panelWeather, clockDisplay);
+      this._topBox.add_child(clockDisplay);
+      this._topBox.add_child(this._panelWeather);
       this._panelWeather.add_style_class_name("weather-after-clock");
     } else {
-      parent.insert_child_below(this._panelWeather, clockDisplay);
+      this._topBox.add_child(this._panelWeather);
+      this._topBox.add_child(clockDisplay);
       this._panelWeather.add_style_class_name("weather-before-clock");
     }
   }
