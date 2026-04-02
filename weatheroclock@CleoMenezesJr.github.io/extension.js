@@ -275,8 +275,10 @@ const PanelWeather = GObject.registerClass(
       if (!this._weather) return;
 
       if (weather.loading) {
-        if (!this._hasData && !this._gaveUp)
+        if (!this._hasData && !this._gaveUp) {
           this._startSpinner();
+          this._scheduleRetry();
+        }
         return;
       }
 
@@ -329,9 +331,8 @@ const PanelWeather = GObject.registerClass(
     _scheduleRetry() {
       if (this._retryTimeout) return;
       this._retryCount++;
-      if (this._spinner.get_content() === null)
-        this._startSpinner();
-      this._retryTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 30, () => {
+      const delay = this._retryCount <= 2 ? 5 : 30;
+      this._retryTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, delay, () => {
         this._retryTimeout = null;
         if (this._weather) this._weather.update();
         return GLib.SOURCE_REMOVE;
