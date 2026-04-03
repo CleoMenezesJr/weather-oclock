@@ -129,10 +129,14 @@ const PanelWeather = GObject.registerClass(
       this._signals = [];
       this._weatherUpdateTimeout = null;
       this._retryTimeout = null;
+      this._descriptionTimeout = null;
       this._retryCount = 0;
       this._hasData = false;
       this._notified = false;
       this._gaveUp = false;
+      this._currentDescription = null;
+      this._currentTemp = null;
+      this._showingDescription = false;
 
       this._icon = new St.Icon({
         y_align: Clutter.ActorAlign.CENTER,
@@ -179,6 +183,7 @@ const PanelWeather = GObject.registerClass(
       this.remove_all_transitions();
       this._cancelLongTermUpdateTimeout();
       this._cancelRetry();
+      this._cancelDescriptionTimeout();
       this._spinner.stop();
       this._signals.forEach((s) => s.obj.disconnect(s.signalId));
       this._signals = null;
@@ -188,37 +193,43 @@ const PanelWeather = GObject.registerClass(
       super.destroy();
     }
 
-    _crossfade(applyFn) {
+    _animateClockTranslation(fromWidth) {
+      const parent = this.get_parent();
+      const clockDisplay = this._clockDisplay;
+      if (!parent || !clockDisplay) return;
+
+      const [, toWidth] = this.get_preferred_width(-1);
+      const delta = toWidth - fromWidth;
+      if (Math.abs(delta) <= 2) return;
+
+      const children = parent.get_children();
+      const myIndex = children.indexOf(this);
+      const clockIndex = children.indexOf(clockDisplay);
+      const sign = myIndex < clockIndex ? -1 : 1;
+      clockDisplay.remove_all_transitions();
+      clockDisplay.translation_x = sign * delta / 2;
+      clockDisplay.ease({
+        translation_x: 0,
+        duration: 500,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+      });
+    }
+
+    _crossfade(applyFn, onShown = null) {
       const doTransition = () => {
-        const parent = this.get_parent();
         const fromWidth = this.visible ? this.width : 0;
 
         applyFn();
         this.opacity = 0;
         this.visible = true;
 
-        const [, toWidth] = this.get_preferred_width(-1);
-        const delta = toWidth - fromWidth;
-
-        const clockDisplay = this._clockDisplay;
-        if (parent && clockDisplay && Math.abs(delta) > 2) {
-          const children = parent.get_children();
-          const myIndex = children.indexOf(this);
-          const clockIndex = children.indexOf(clockDisplay);
-          const sign = myIndex < clockIndex ? -1 : 1;
-          clockDisplay.remove_all_transitions();
-          clockDisplay.translation_x = sign * delta / 2;
-          clockDisplay.ease({
-            translation_x: 0,
-            duration: 500,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-          });
-        }
+        this._animateClockTranslation(fromWidth);
 
         this.ease({
           opacity: 255,
           duration: 500,
           mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+          onComplete: onShown ?? undefined,
         });
       };
 
@@ -247,10 +258,13 @@ const PanelWeather = GObject.registerClass(
       });
     }
 
-    _showWeather(iconName, temp) {
+    _showWeather(iconName, temp, onShown = null) {
+      this._currentTemp = temp;
       if (this._hasData) {
         this._icon.icon_name = iconName;
-        this._label.text = temp;
+        if (!this._showingDescription)
+          this._label.text = temp;
+        onShown?.();
         return;
       }
       this._crossfade(() => {
@@ -259,7 +273,7 @@ const PanelWeather = GObject.registerClass(
         this._icon.show();
         this._label.text = temp;
         this._label.show();
-      });
+      }, onShown);
     }
 
     _showOffline() {
@@ -290,7 +304,19 @@ const PanelWeather = GObject.registerClass(
         this._cancelRetry();
         this._retryCount = 0;
         this._gaveUp = false;
-        this._showWeather(iconName, temp);
+        const sky = weather.info.get_sky();
+        const conditions = weather.info.get_conditions();
+        const description = (sky && sky !== "-") ? sky : (conditions && conditions !== "-") ? conditions : null;
+        const onShown = description ? () => {
+          if (!this._weather) return;
+          this._cancelDescriptionTimeout();
+          this._descriptionTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
+            this._descriptionTimeout = null;
+            if (this._weather) this._showDescription(description);
+            return GLib.SOURCE_REMOVE;
+          });
+        } : null;
+        this._showWeather(iconName, temp, onShown);
         if (!this._hasData) {
           this._hasData = true;
           this._startLongTermUpdateTimeout();
@@ -343,6 +369,67 @@ const PanelWeather = GObject.registerClass(
       if (this._retryTimeout) {
         GLib.source_remove(this._retryTimeout);
         this._retryTimeout = null;
+      }
+    }
+
+    _showDescription(text) {
+      if (!text || text === "-") return;
+      if (text === this._currentDescription) return;
+      this._currentDescription = text;
+
+      this._cancelDescriptionTimeout();
+      this._showingDescription = true;
+      this._label.remove_all_transitions();
+      this._label.ease({
+        opacity: 0,
+        duration: 250,
+        mode: Clutter.AnimationMode.EASE_IN_QUAD,
+        onComplete: () => {
+          if (!this._weather) return;
+          const fromWidth = this.width;
+          this._label.text = text;
+          this._animateClockTranslation(fromWidth);
+          this._label.ease({
+            opacity: 255,
+            duration: 500,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: () => {
+              this._descriptionTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
+                this._descriptionTimeout = null;
+                this._hideDescription();
+                return GLib.SOURCE_REMOVE;
+              });
+            },
+          });
+        },
+      });
+    }
+
+    _hideDescription() {
+      this._label.remove_all_transitions();
+      this._label.ease({
+        opacity: 0,
+        duration: 250,
+        mode: Clutter.AnimationMode.EASE_IN_QUAD,
+        onComplete: () => {
+          if (!this._weather) return;
+          this._showingDescription = false;
+          const fromWidth = this.width;
+          this._label.text = this._currentTemp ?? "";
+          this._animateClockTranslation(fromWidth);
+          this._label.ease({
+            opacity: 255,
+            duration: 500,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+          });
+        },
+      });
+    }
+
+    _cancelDescriptionTimeout() {
+      if (this._descriptionTimeout) {
+        GLib.source_remove(this._descriptionTimeout);
+        this._descriptionTimeout = null;
       }
     }
 
