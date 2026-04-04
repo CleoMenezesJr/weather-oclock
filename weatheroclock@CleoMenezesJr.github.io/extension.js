@@ -298,10 +298,10 @@ const PanelWeather = GObject.registerClass(
       }
 
       const iconName = weather.info.get_symbolic_icon_name();
-      // "--" is not a valid temp...
-      const temp = weather.info.get_temp_summary().replace("--", "");
+      const [tempOk] = weather.info.get_value_temp(GWeather.TemperatureUnit.DEFAULT);
+      const temp = tempOk ? weather.info.get_temp_summary() : "";
 
-      if (iconName && temp) {
+      if (iconName && iconName !== "weather-missing-symbolic" && temp) {
         this._cancelRetry();
         this._retryCount = 0;
         this._gaveUp = false;
