@@ -207,6 +207,7 @@ const PanelWeather = GObject.registerClass(
       const myIndex = children.indexOf(this);
       const clockIndex = children.indexOf(clockDisplay);
       const sign = myIndex < clockIndex ? -1 : 1;
+
       clockDisplay.remove_all_transitions();
       clockDisplay.translation_x = sign * delta / 2;
       clockDisplay.ease({
@@ -229,6 +230,7 @@ const PanelWeather = GObject.registerClass(
         this.ease({
           opacity: 255,
           duration: 500,
+          delay: 150,
           mode: Clutter.AnimationMode.EASE_OUT_QUAD,
           onComplete: onShown ?? undefined,
         });
@@ -399,6 +401,7 @@ const PanelWeather = GObject.registerClass(
           this._label.ease({
             opacity: 255,
             duration: 500,
+            delay: 150,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onComplete: () => {
               this._descriptionTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
@@ -427,6 +430,7 @@ const PanelWeather = GObject.registerClass(
           this._label.ease({
             opacity: 255,
             duration: 500,
+            delay: 150,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
           });
         },
