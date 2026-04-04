@@ -11,7 +11,7 @@ import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import GWeather from "gi://GWeather";
-import * as Weather from "resource:///org/gnome/shell/misc/weather.js";
+
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Spinner } from 'resource:///org/gnome/shell/ui/animation.js';
@@ -31,7 +31,7 @@ export default class WeatherOClock extends Extension {
     const dateMenu = Main.panel.statusArea.dateMenu;
     const network = Main.panel._network;
     const networkIcon = network ? network._primaryIndicator : null;
-    const weather = new Weather.WeatherClient();
+    const weather = dateMenu._weatherItem._weatherClient;
 
     this._originalClockDisplay = dateMenu._clockDisplay;
     this._panelWeather = new PanelWeather(weather, networkIcon, this._originalClockDisplay);
