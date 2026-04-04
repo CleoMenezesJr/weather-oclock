@@ -22,6 +22,7 @@ import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import St from "gi://St";
+import GWeather from "gi://GWeather";
 import * as Weather from "resource:///org/gnome/shell/misc/weather.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -304,9 +305,15 @@ const PanelWeather = GObject.registerClass(
         this._cancelRetry();
         this._retryCount = 0;
         this._gaveUp = false;
-        const sky = weather.info.get_sky();
-        const conditions = weather.info.get_conditions();
-        const description = (sky && sky !== "-") ? sky : (conditions && conditions !== "-") ? conditions : null;
+        const [skyOk, skyValue] = weather.info.get_value_sky();
+        const [condOk, condPhenom, condQual] = weather.info.get_value_conditions();
+        let description = null;
+
+        if (skyOk && skyValue !== GWeather.Sky.INVALID)
+          description = weather.info.get_sky();
+        else if (condOk && condPhenom !== GWeather.ConditionPhenomenon.INVALID && condPhenom !== GWeather.ConditionPhenomenon.NONE)
+          description = weather.info.get_conditions();
+
         const onShown = description ? () => {
           if (!this._weather) return;
           this._cancelDescriptionTimeout();
