@@ -194,7 +194,7 @@ const PanelWeather = GObject.registerClass(
       super.destroy();
     }
 
-    _animateClockTranslation(fromWidth) {
+    _animateLayoutTranslation(fromWidth) {
       const parent = this.get_parent();
       const clockDisplay = this._clockDisplay;
       if (!parent || !clockDisplay) return;
@@ -208,9 +208,19 @@ const PanelWeather = GObject.registerClass(
       const clockIndex = children.indexOf(clockDisplay);
       const sign = myIndex < clockIndex ? -1 : 1;
 
+      // Animate Clock
       clockDisplay.remove_all_transitions();
       clockDisplay.translation_x = sign * delta / 2;
       clockDisplay.ease({
+        translation_x: 0,
+        duration: 500,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+      });
+
+      // Animate Weather
+      this.remove_all_transitions();
+      this.translation_x = -sign * delta / 2;
+      this.ease({
         translation_x: 0,
         duration: 500,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
@@ -225,7 +235,7 @@ const PanelWeather = GObject.registerClass(
         this.opacity = 0;
         this.visible = true;
 
-        this._animateClockTranslation(fromWidth);
+        this._animateLayoutTranslation(fromWidth);
 
         this.ease({
           opacity: 255,
@@ -397,7 +407,7 @@ const PanelWeather = GObject.registerClass(
           if (!this._weather) return;
           const fromWidth = this.width;
           this._label.text = text;
-          this._animateClockTranslation(fromWidth);
+          this._animateLayoutTranslation(fromWidth);
           this._label.ease({
             opacity: 255,
             duration: 500,
@@ -426,7 +436,7 @@ const PanelWeather = GObject.registerClass(
           this._showingDescription = false;
           const fromWidth = this.width;
           this._label.text = this._currentTemp ?? "";
-          this._animateClockTranslation(fromWidth);
+          this._animateLayoutTranslation(fromWidth);
           this._label.ease({
             opacity: 255,
             duration: 500,
