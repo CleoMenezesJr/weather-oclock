@@ -239,7 +239,10 @@ const PanelWeather = GObject.registerClass(
           duration: 500,
           delay: 150,
           mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-          onComplete: onShown ?? undefined,
+          onComplete: () => {
+            if (this._weather)
+              onShown?.();
+          },
         });
         return;
       }
@@ -258,7 +261,10 @@ const PanelWeather = GObject.registerClass(
             duration: 500,
             delay: 150,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: onShown ?? undefined,
+            onComplete: () => {
+              if (this._weather)
+                onShown?.();
+            },
           });
         },
       });
@@ -402,9 +408,10 @@ const PanelWeather = GObject.registerClass(
       this._applyTransition(this._label, () => {
         this._label.text = text;
       }, () => {
+        if (!this._weather) return;
         this._descriptionTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
           this._descriptionTimeout = null;
-          this._hideDescription();
+          if (this._weather) this._hideDescription();
           return GLib.SOURCE_REMOVE;
         });
       });
