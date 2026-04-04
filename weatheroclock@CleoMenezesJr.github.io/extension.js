@@ -32,9 +32,8 @@ export default class WeatherOClock extends Extension {
     const network = Main.panel._network;
     const networkIcon = network ? network._primaryIndicator : null;
     const weather = dateMenu._weatherItem._weatherClient;
-
     this._originalClockDisplay = dateMenu._clockDisplay;
-    this._panelWeather = new PanelWeather(weather, networkIcon, this._originalClockDisplay);
+    this._panelWeather = new WeatherOClockPanelWeather(weather, networkIcon, this._originalClockDisplay);
 
     this._topBox = new St.BoxLayout({ style_class: "clock" });
 
@@ -101,11 +100,11 @@ export default class WeatherOClock extends Extension {
   }
 }
 
-const PanelWeather = GObject.registerClass(
+const WeatherOClockPanelWeather = GObject.registerClass(
   {
-    GTypeName: "PanelWeather",
+    GTypeName: "WeatherOClockPanelWeather",
   },
-  class PanelWeather extends St.BoxLayout {
+  class WeatherOClockPanelWeather extends St.BoxLayout {
     _init(weather, networkIcon, clockDisplay) {
       super._init({
         visible: false,
