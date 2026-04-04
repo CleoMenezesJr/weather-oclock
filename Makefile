@@ -21,9 +21,12 @@ install: build
 	rm -rf $(INSTALLBASE)/$(INSTALLNAME)
 	mkdir -p $(INSTALLBASE)/$(INSTALLNAME)
 	cp -r ./weatheroclock@CleoMenezesJr.github.io/* $(INSTALLBASE)/$(INSTALLNAME)
+	rm  ./weatheroclock@CleoMenezesJr.github.io/schemas/gschemas.compiled
 
 .PHONY: uninstall
 uninstall:
 	rm -rf $(INSTALLBASE)/$(INSTALLNAME)
 
 .PHONY: clean
+clean:
+	rm -f ./weatheroclock@CleoMenezesJr.github.io/schemas/gschemas.compiled
