@@ -227,40 +227,45 @@ const PanelWeather = GObject.registerClass(
       });
     }
 
-    _crossfade(applyFn, onShown = null) {
-      const doTransition = () => {
+    _applyTransition(actor, applyFn, onShown = null) {
+      if (!this.visible || this.opacity === 0 || actor.opacity === 0) {
         const fromWidth = this.visible ? this.width : 0;
-
         applyFn();
-        this.opacity = 0;
+        actor.opacity = 0;
         this.visible = true;
-
         this._animateLayoutTranslation(fromWidth);
-
-        this.ease({
+        actor.ease({
           opacity: 255,
           duration: 500,
           delay: 150,
           mode: Clutter.AnimationMode.EASE_OUT_QUAD,
           onComplete: onShown ?? undefined,
         });
-      };
-
-      if (!this.visible || this.opacity === 0) {
-        doTransition();
         return;
       }
 
-      this.ease({
+      actor.ease({
         opacity: 0,
         duration: 250,
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
         onComplete: () => {
           if (!this._weather) return;
-          this.visible = false;
-          doTransition();
+          const fromWidth = this.width;
+          applyFn();
+          this._animateLayoutTranslation(fromWidth);
+          actor.ease({
+            opacity: 255,
+            duration: 500,
+            delay: 150,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: onShown ?? undefined,
+          });
         },
       });
+    }
+
+    _crossfade(applyFn, onShown = null) {
+      this._applyTransition(this, applyFn, onShown);
     }
 
     _startSpinner() {
@@ -273,20 +278,20 @@ const PanelWeather = GObject.registerClass(
 
     _showWeather(iconName, temp, onShown = null) {
       this._currentTemp = temp;
-      if (this._hasData) {
-        this._icon.icon_name = iconName;
-        if (!this._showingDescription)
-          this._label.text = temp;
-        onShown?.();
-        return;
-      }
-      this._crossfade(() => {
+      this._applyTransition(this._hasData ? this._label : this, () => {
         this._spinner.stop();
         this._icon.icon_name = iconName;
         this._icon.show();
-        this._label.text = temp;
-        this._label.show();
+        if (!this._showingDescription) {
+          this._label.text = temp;
+          this._label.show();
+        }
       }, onShown);
+
+      if (!this._hasData) {
+        this._hasData = true;
+        this._startLongTermUpdateTimeout();
+      }
     }
 
     _showOffline() {
@@ -336,10 +341,6 @@ const PanelWeather = GObject.registerClass(
           });
         } : null;
         this._showWeather(iconName, temp, onShown);
-        if (!this._hasData) {
-          this._hasData = true;
-          this._startLongTermUpdateTimeout();
-        }
       } else if (!this._hasData) {
         if (this._networkIcon && !this._networkIcon.visible) return;
         if (this._retryCount < 5) {
@@ -392,58 +393,27 @@ const PanelWeather = GObject.registerClass(
     }
 
     _showDescription(text) {
-      if (!text || text === "-") return;
-      if (text === this._currentDescription) return;
+      if (!text || text === "-" || text === this._currentDescription) return;
       this._currentDescription = text;
 
       this._cancelDescriptionTimeout();
       this._showingDescription = true;
-      this._label.remove_all_transitions();
-      this._label.ease({
-        opacity: 0,
-        duration: 250,
-        mode: Clutter.AnimationMode.EASE_IN_QUAD,
-        onComplete: () => {
-          if (!this._weather) return;
-          const fromWidth = this.width;
-          this._label.text = text;
-          this._animateLayoutTranslation(fromWidth);
-          this._label.ease({
-            opacity: 255,
-            duration: 500,
-            delay: 150,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: () => {
-              this._descriptionTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
-                this._descriptionTimeout = null;
-                this._hideDescription();
-                return GLib.SOURCE_REMOVE;
-              });
-            },
-          });
-        },
+
+      this._applyTransition(this._label, () => {
+        this._label.text = text;
+      }, () => {
+        this._descriptionTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
+          this._descriptionTimeout = null;
+          this._hideDescription();
+          return GLib.SOURCE_REMOVE;
+        });
       });
     }
 
     _hideDescription() {
-      this._label.remove_all_transitions();
-      this._label.ease({
-        opacity: 0,
-        duration: 250,
-        mode: Clutter.AnimationMode.EASE_IN_QUAD,
-        onComplete: () => {
-          if (!this._weather) return;
-          this._showingDescription = false;
-          const fromWidth = this.width;
-          this._label.text = this._currentTemp ?? "";
-          this._animateLayoutTranslation(fromWidth);
-          this._label.ease({
-            opacity: 255,
-            duration: 500,
-            delay: 150,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-          });
-        },
+      this._applyTransition(this._label, () => {
+        this._showingDescription = false;
+        this._label.text = this._currentTemp ?? "";
       });
     }
 
