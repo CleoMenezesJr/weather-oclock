@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<interface domain="auto-activities">
+<interface domain="weatheroclock">
   <object class="AdwPreferencesPage" id="MainWidget">
     <property name="title" translatable="yes">Preferences</property>
     <child>
