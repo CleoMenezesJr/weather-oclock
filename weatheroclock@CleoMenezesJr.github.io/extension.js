@@ -124,6 +124,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this._gaveUp = false;
       this._currentDescription = null;
       this._currentTemp = null;
+      this._currentIconName = null;
       this._showingDescription = false;
 
       this._icon = new St.Icon({
@@ -270,7 +271,13 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     }
 
     _showWeather(iconName, temp, onShown = null) {
+      const changed = iconName !== this._currentIconName || temp !== this._currentTemp;
       this._currentTemp = temp;
+      this._currentIconName = iconName;
+
+      if (this._hasData && (!changed || this._showingDescription))
+        return;
+
       this._applyTransition(this._hasData ? this._label : this, () => {
         this._spinner.stop();
         this._icon.icon_name = iconName;
