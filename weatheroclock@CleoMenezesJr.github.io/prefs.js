@@ -9,12 +9,13 @@
 
 import Gtk from "gi://Gtk";
 import Gio from "gi://Gio";
-import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
+import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class WeatherOClockPreferences extends ExtensionPreferences {
   fillPreferencesWindow(window) {
     window._settings = this.getSettings();
     window.set_default_size(360, 200);
+    window.set_title(_('Weather O\'Clock Settings'));
 
     const builder = new Gtk.Builder();
     builder.add_from_file(`${this.path}/prefs.ui`);
