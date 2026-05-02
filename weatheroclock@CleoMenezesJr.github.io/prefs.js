@@ -15,7 +15,7 @@ export default class WeatherOClockPreferences extends ExtensionPreferences {
   fillPreferencesWindow(window) {
     window._settings = this.getSettings();
     window.set_default_size(360, 200);
-    window.set_title(_('Weather O\'Clock Settings'));
+    window.set_title(_('Weather OClock Settings'));
 
     const builder = new Gtk.Builder();
     builder.add_from_file(`${this.path}/prefs.ui`);
