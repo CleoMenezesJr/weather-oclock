@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: extension.js
-msgid "Weather O'Clock"
+msgid "Weather OClock"
 msgstr ""
 
 #: extension.js
