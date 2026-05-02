@@ -5,11 +5,12 @@
   "shell-version": ["45", "46", "47", "48", "49", "50"],
   "url": "https://github.com/CleoMenezesJr/weather-oclock",
   "original-author": "JasonLG1979@github.io",
+  "gettext-domain": "weather-oclock,
   "donations": {
     "github": "CleoMenezesJr",
     "kofi": "cleomenezesjr",
     "paypal": "CleoMenezesJr"
   },
   "settings-schema": "org.gnome.shell.extensions.weather-oclock",
-  "version-name": "50.2"
+  "version-name": "50.3"
 }
