@@ -290,8 +290,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         }
       }, onShown);
 
-      if (!wasShowing)
-        this._startLongTermUpdateTimeout();
+      this._setState(STATES.SHOWING);
     }
 
     _setState(newState) {
@@ -309,9 +308,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
           break;
 
         case STATES.SHOWING:
-          // UI transition into SHOWING is performed by _showWeather()
-          // which has the iconName + temp arguments. This case is a no-op:
-          // callers must invoke _showWeather() and then state becomes SHOWING.
+          this._startLongTermUpdateTimeout();
           break;
 
         case STATES.OFFLINE:
@@ -422,7 +419,6 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         } : null;
 
         this._showWeather(iconName, temp, onShown);
-        this._state = STATES.SHOWING;
         return;
       }
 
