@@ -316,11 +316,14 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
         case STATES.OFFLINE:
         case STATES.STALE:
+          this._cancelDescriptionTimeout();
           this._cancelRetry();
+          this._cancelLongTermUpdateTimeout();
           this._hideWidget();
           break;
 
         case STATES.UNAVAILABLE:
+          this._cancelDescriptionTimeout();
           this._cancelRetry();
           this._cancelLongTermUpdateTimeout();
           this._hideWidget();
