@@ -21,10 +21,18 @@ export default class WeatherOClockPreferences extends ExtensionPreferences {
 
     const weatherAfterClock = builder.get_object("WeatherAfterClock");
     weatherAfterClock.set_active(window._settings.get_boolean("weather-after-clock"));
-
     window._settings.bind(
       "weather-after-clock",
       weatherAfterClock,
+      "active",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
+
+    const showFeelsLike = builder.get_object("ShowFeelsLike");
+    showFeelsLike.set_active(window._settings.get_boolean("show-feels-like"));
+    window._settings.bind(
+      "show-feels-like",
+      showFeelsLike,
       "active",
       Gio.SettingsBindFlags.DEFAULT,
     );

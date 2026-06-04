@@ -18,6 +18,19 @@
             </child>
           </object>
         </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Show Feels Like</property>
+            <property name="subtitle" translatable="yes">Show apparent temperature after the weather description</property>
+            <property name="activatable-widget">ShowFeelsLike</property>
+            <child>
+              <object class="GtkSwitch" id="ShowFeelsLike">
+                <property name="valign">center</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </object>
