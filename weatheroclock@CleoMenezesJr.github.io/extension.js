@@ -14,7 +14,7 @@ import St from "gi://St";
 import GWeather from "gi://GWeather";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { Spinner } from 'resource:///org/gnome/shell/ui/animation.js';
 
 const STATES = Object.freeze({
@@ -332,8 +332,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
           if (!this._notified) {
             this._notified = true;
             Main.notify(
-              'Weather O\'Clock',
-              'GNOME Weather is required. Please install it for weather information to appear.',
+              _('Weather O\'Clock'),
+              _('GNOME Weather is required. Please install it for weather information to appear.'),
             );
           }
           break;
