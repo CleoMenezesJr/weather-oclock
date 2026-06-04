@@ -374,7 +374,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       if (!this._weather) return;
 
       if (this._monitor.connectivity === Gio.NetworkConnectivity.LOCAL) {
-        this._setState(STATES.OFFLINE);
+        this._onWeatherInfoUpdate(this._weather);
         return;
       }
       this._weather.update();
