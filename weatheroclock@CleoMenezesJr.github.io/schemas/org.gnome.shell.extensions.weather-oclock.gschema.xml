@@ -5,8 +5,5 @@
     <key name="weather-after-clock" type="b">
       <default>false</default>
     </key>
-    <key name="show-feels-like" type="b">
-      <default>false</default>
-    </key>
   </schema>
 </schemalist>

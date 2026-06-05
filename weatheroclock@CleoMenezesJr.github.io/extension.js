@@ -43,7 +43,7 @@ export default class WeatherOClock extends Extension {
     const weather = dateMenu._weatherItem._weatherClient;
     this._originalClockDisplay = dateMenu._clockDisplay;
     this._settings = this.getSettings();
-    this._panelWeather = new WeatherOClockPanelWeather(weather, this._originalClockDisplay, this._settings);
+    this._panelWeather = new WeatherOClockPanelWeather(weather, this._originalClockDisplay);
 
     this._topBox = new St.BoxLayout({ style_class: "clock" });
 
@@ -114,7 +114,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     GTypeName: "WeatherOClockPanelWeather",
   },
   class WeatherOClockPanelWeather extends St.BoxLayout {
-    _init(weather, clockDisplay, settings) {
+    _init(weather, clockDisplay) {
       super._init({
         visible: false,
         y_align: Clutter.ActorAlign.CENTER,
@@ -122,7 +122,6 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
       this._weather = weather;
       this._clockDisplay = clockDisplay;
-      this._settings = settings;
       this._signals = [];
       this._timers = {};
       this._retryCount = 0;
@@ -177,7 +176,6 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this._weather = null;
       this._monitor = null;
       this._clockDisplay = null;
-      this._settings = null;
       super.destroy();
     }
 
@@ -413,21 +411,13 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         else if (condOk && condPhenom !== GWeather.ConditionPhenomenon.INVALID && condPhenom !== GWeather.ConditionPhenomenon.NONE)
           description = weather.info.get_conditions();
 
-        const [apparentOk] = weather.info.get_value_apparent(GWeather.TemperatureUnit.DEFAULT);
-        const feelsLike = (apparentOk && this._settings?.get_boolean('show-feels-like'))
-          ? weather.info.get_apparent()
-          : null;
-
-        const onShown = (description || feelsLike) ? () => {
+        const onShown = description ? () => {
           if (!this._weather) return;
           this._cancelTimer('description');
           this._timers.description = GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
             this._timers.description = null;
             if (!this._weather) return GLib.SOURCE_REMOVE;
-            if (description)
-              this._showDescription(description, feelsLike);
-            else
-              this._showFeelsLike(feelsLike);
+            this._showDescription(description);
             return GLib.SOURCE_REMOVE;
           });
         } : null;
@@ -465,32 +455,13 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       });
     }
 
-    _showDescription(text, feelsLike = null) {
+    _showDescription(text) {
       if (!text || text === "-" || text === this._currentDescription) return;
       this._currentDescription = text;
 
       this._cancelTimer('description');
       this._showingDescription = true;
 
-      this._applyTransition(this._label, () => {
-        this._label.text = text;
-      }, () => {
-        if (!this._weather) return;
-        this._timers.description = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
-          this._timers.description = null;
-          if (this._weather) {
-            if (feelsLike)
-              this._showFeelsLike(feelsLike);
-            else
-              this._hideDescription();
-          }
-          return GLib.SOURCE_REMOVE;
-        });
-      });
-    }
-
-    _showFeelsLike(text) {
-      this._cancelTimer('description');
       this._applyTransition(this._label, () => {
         this._label.text = text;
       }, () => {

@@ -28,15 +28,6 @@ export default class WeatherOClockPreferences extends ExtensionPreferences {
       Gio.SettingsBindFlags.DEFAULT,
     );
 
-    const showFeelsLike = builder.get_object("ShowFeelsLike");
-    showFeelsLike.set_active(window._settings.get_boolean("show-feels-like"));
-    window._settings.bind(
-      "show-feels-like",
-      showFeelsLike,
-      "active",
-      Gio.SettingsBindFlags.DEFAULT,
-    );
-
     const page = builder.get_object("MainWidget");
     window.add(page);
   }
