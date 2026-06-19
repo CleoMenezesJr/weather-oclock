@@ -169,7 +169,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
     destroy() {
       this.remove_all_transitions();
-      ['longTermUpdate', 'retry', 'description'].forEach(k => this._cancelTimer(k));
+      this._cancelAllTimers();
       this._spinner.stop();
       this._signals.forEach((s) => s.obj.disconnect(s.signalId));
       this._signals = null;
@@ -212,6 +212,19 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       });
     }
 
+    _fadeIn(actor, onShown) {
+      actor.ease({
+        opacity: 255,
+        duration: 500,
+        delay: 150,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        onComplete: () => {
+          if (this._weather)
+            onShown?.();
+        },
+      });
+    }
+
     _applyTransition(actor, applyFn, onShown = null) {
       if (!this.visible || this.opacity === 0 || actor.opacity === 0) {
         const fromWidth = this.visible ? this.width : 0;
@@ -219,16 +232,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         actor.opacity = 0;
         this.visible = true;
         this._animateLayoutTranslation(fromWidth);
-        actor.ease({
-          opacity: 255,
-          duration: 500,
-          delay: 150,
-          mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-          onComplete: () => {
-            if (this._weather)
-              onShown?.();
-          },
-        });
+        this._fadeIn(actor, onShown);
         return;
       }
 
@@ -241,30 +245,13 @@ const WeatherOClockPanelWeather = GObject.registerClass(
           const fromWidth = this.width;
           applyFn();
           this._animateLayoutTranslation(fromWidth);
-          actor.ease({
-            opacity: 255,
-            duration: 500,
-            delay: 150,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: () => {
-              if (this._weather)
-                onShown?.();
-            },
-          });
+          this._fadeIn(actor, onShown);
         },
       });
     }
 
     _crossfade(applyFn, onShown = null) {
       this._applyTransition(this, applyFn, onShown);
-    }
-
-    _startSpinner() {
-      this._crossfade(() => {
-        this._spinner.play();
-        this._icon.hide();
-        this._label.hide();
-      });
     }
 
     _showWeather(iconName, temp, onShown = null) {
@@ -308,24 +295,18 @@ const WeatherOClockPanelWeather = GObject.registerClass(
           break;
 
         case STATES.OFFLINE:
-          this._cancelTimer('description');
-          this._cancelTimer('retry');
-          this._cancelTimer('longTermUpdate');
+          this._cancelAllTimers();
           this._hideWidget();
           break;
 
         case STATES.STALE:
-          this._cancelTimer('description');
-          this._cancelTimer('retry');
-          this._cancelTimer('longTermUpdate');
+          this._cancelAllTimers();
           if (!this._currentIconName || !this._currentTemp)
             this._hideWidget();
           break;
 
         case STATES.UNAVAILABLE:
-          this._cancelTimer('description');
-          this._cancelTimer('retry');
-          this._cancelTimer('longTermUpdate');
+          this._cancelAllTimers();
           this._hideWidget();
           if (!this._notified) {
             this._notified = true;
@@ -376,8 +357,14 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     _evaluateInitialState() {
       if (!this._weather) return;
 
-      if (this._monitor.connectivity === Gio.NetworkConnectivity.LOCAL) {
+      // update() silently no-ops on fresh cached info, so forcing LOADING here would never resolve.
+      if (this._weather.info.is_valid() || this._weather.loading) {
         this._onWeatherInfoUpdate(this._weather);
+        return;
+      }
+
+      if (this._monitor.connectivity === Gio.NetworkConnectivity.LOCAL) {
+        this._setState(STATES.OFFLINE);
         return;
       }
       this._weather.update();
@@ -442,6 +429,12 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         GLib.source_remove(this._timers[key]);
         this._timers[key] = null;
       }
+    }
+
+    _cancelAllTimers() {
+      this._cancelTimer('description');
+      this._cancelTimer('retry');
+      this._cancelTimer('longTermUpdate');
     }
 
     _scheduleRetry() {
