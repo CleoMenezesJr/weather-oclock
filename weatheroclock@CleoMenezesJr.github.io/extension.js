@@ -123,7 +123,9 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this._weather = weather;
       this._clockDisplay = clockDisplay;
       this._signals = [];
-      this._timers = {};
+      this._descriptionTimer = null;
+      this._retryTimer = null;
+      this._longTermUpdateTimer = null;
       this._retryCount = 0;
       this._notified = false;
       this._state = null;
@@ -282,7 +284,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
       switch (newState) {
         case STATES.LOADING:
-          this._cancelTimer('description');
+          this._cancelDescriptionTimer();
           this._crossfade(() => {
             this._spinner.play();
             this._icon.hide();
@@ -326,7 +328,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       const connectivity = this._monitor.connectivity;
 
       if (connectivity === Gio.NetworkConnectivity.LOCAL) {
-        this._cancelTimer('retry');
+        this._cancelRetryTimer();
         if (!this._weather.info.is_valid())
           this._setState(STATES.OFFLINE);
         return;
@@ -386,7 +388,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       const temp = tempOk ? weather.info.get_temp_summary() : "";
 
       if (iconName && iconName !== "weather-missing-symbolic" && temp) {
-        this._cancelTimer('retry');
+        this._cancelRetryTimer();
         this._retryCount = 0;
 
         const [skyOk, skyValue] = weather.info.get_value_sky();
@@ -400,9 +402,12 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
         const onShown = description ? () => {
           if (!this._weather) return;
-          this._cancelTimer('description');
-          this._timers.description = GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
-            this._timers.description = null;
+          if (this._descriptionTimer) {
+            GLib.source_remove(this._descriptionTimer);
+            this._descriptionTimer = null;
+          }
+          this._descriptionTimer = GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
+            this._descriptionTimer = null;
             if (!this._weather) return GLib.SOURCE_REMOVE;
             this._showDescription(description);
             return GLib.SOURCE_REMOVE;
@@ -424,25 +429,39 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       }
     }
 
-    _cancelTimer(key) {
-      if (this._timers[key]) {
-        GLib.source_remove(this._timers[key]);
-        this._timers[key] = null;
+    _cancelDescriptionTimer() {
+      if (this._descriptionTimer) {
+        GLib.source_remove(this._descriptionTimer);
+        this._descriptionTimer = null;
+      }
+    }
+
+    _cancelRetryTimer() {
+      if (this._retryTimer) {
+        GLib.source_remove(this._retryTimer);
+        this._retryTimer = null;
+      }
+    }
+
+    _cancelLongTermUpdateTimer() {
+      if (this._longTermUpdateTimer) {
+        GLib.source_remove(this._longTermUpdateTimer);
+        this._longTermUpdateTimer = null;
       }
     }
 
     _cancelAllTimers() {
-      this._cancelTimer('description');
-      this._cancelTimer('retry');
-      this._cancelTimer('longTermUpdate');
+      this._cancelDescriptionTimer();
+      this._cancelRetryTimer();
+      this._cancelLongTermUpdateTimer();
     }
 
     _scheduleRetry() {
-      if (this._timers.retry) return;
+      if (this._retryTimer) return;
       this._retryCount++;
       const delay = this._retryCount <= 2 ? 5 : 30;
-      this._timers.retry = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, delay, () => {
-        this._timers.retry = null;
+      this._retryTimer = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, delay, () => {
+        this._retryTimer = null;
         if (this._weather) this._weather.update();
         return GLib.SOURCE_REMOVE;
       });
@@ -452,15 +471,19 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       if (!text || text === "-" || text === this._currentDescription) return;
       this._currentDescription = text;
 
-      this._cancelTimer('description');
+      this._cancelDescriptionTimer();
       this._showingDescription = true;
 
       this._applyTransition(this._label, () => {
         this._label.text = text;
       }, () => {
         if (!this._weather) return;
-        this._timers.description = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
-          this._timers.description = null;
+        if (this._descriptionTimer) {
+          GLib.source_remove(this._descriptionTimer);
+          this._descriptionTimer = null;
+        }
+        this._descriptionTimer = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 5, () => {
+          this._descriptionTimer = null;
           if (this._weather) this._hideDescription();
           return GLib.SOURCE_REMOVE;
         });
@@ -487,8 +510,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     }
 
     _startLongTermUpdateTimeout() {
-      this._cancelTimer('longTermUpdate');
-      this._timers.longTermUpdate = GLib.timeout_add_seconds(
+      this._cancelLongTermUpdateTimer();
+      this._longTermUpdateTimer = GLib.timeout_add_seconds(
         GLib.PRIORITY_LOW,
         600,
         () => {
