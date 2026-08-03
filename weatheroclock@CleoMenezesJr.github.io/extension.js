@@ -193,20 +193,18 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       const children = parent.get_children();
       const myIndex = children.indexOf(this);
       const clockIndex = children.indexOf(clockDisplay);
-      const sign = myIndex < clockIndex ? -1 : 1;
-
-      // Animate Clock
+      // The pill is centered, so a delta width change moves its left edge -delta/2 in
+      // either order. Only the clock flips, being pushed when the weather comes first.
       clockDisplay.remove_all_transitions();
-      clockDisplay.translation_x = sign * delta / 2;
+      clockDisplay.translation_x = myIndex < clockIndex ? -delta / 2 : delta / 2;
       clockDisplay.ease({
         translation_x: 0,
         duration: 500,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
       });
 
-      // Animate Weather
       this.remove_all_transitions();
-      this.translation_x = -sign * delta / 2;
+      this.translation_x = delta / 2;
       this.ease({
         translation_x: 0,
         duration: 500,
