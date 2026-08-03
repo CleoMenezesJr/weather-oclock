@@ -181,6 +181,17 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       super.destroy();
     }
 
+    // Fraction of a width change absorbed left of the pill: 0 pinned to the panel's
+    // left box, 1 to the right box, 0.5 centered. Not cached: the menu can be moved.
+    _leftAnchorFraction() {
+      const panel = Main.panel;
+      for (let actor = this.get_parent(); actor; actor = actor.get_parent()) {
+        if (actor === panel._leftBox) return 0;
+        if (actor === panel._rightBox) return 1;
+      }
+      return 0.5;
+    }
+
     _animateLayoutTranslation(fromWidth) {
       const parent = this.get_parent();
       const clockDisplay = this._clockDisplay;
@@ -193,10 +204,12 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       const children = parent.get_children();
       const myIndex = children.indexOf(this);
       const clockIndex = children.indexOf(clockDisplay);
-      // The pill is centered, so a delta width change moves its left edge -delta/2 in
-      // either order. Only the clock flips, being pushed when the weather comes first.
+      // How far the pill's left edge travels. The clock additionally absorbs the whole
+      // delta when the weather grows into its slot.
+      const shift = this._leftAnchorFraction() * delta;
+
       clockDisplay.remove_all_transitions();
-      clockDisplay.translation_x = myIndex < clockIndex ? -delta / 2 : delta / 2;
+      clockDisplay.translation_x = myIndex < clockIndex ? shift - delta : shift;
       clockDisplay.ease({
         translation_x: 0,
         duration: 500,
@@ -204,7 +217,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       });
 
       this.remove_all_transitions();
-      this.translation_x = delta / 2;
+      this.translation_x = shift;
       this.ease({
         translation_x: 0,
         duration: 500,
