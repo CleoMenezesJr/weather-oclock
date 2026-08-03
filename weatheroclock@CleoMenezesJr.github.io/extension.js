@@ -27,6 +27,16 @@ const STATES = Object.freeze({
 
 const MAX_RETRIES = 5;
 
+// The pill resizes the instant the text changes; the contents only slide into place.
+// SLIDE is kept short against FADE_IN_DELAY so most of that travel is over before the
+// contents are legible.
+const ANIM = Object.freeze({
+  FADE_OUT: 250,
+  SLIDE: 300,
+  FADE_IN_DELAY: 200,
+  FADE_IN: 400,
+});
+
 export default class WeatherOClock extends Extension {
   constructor(metadata) {
     super(metadata);
@@ -212,7 +222,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       clockDisplay.translation_x = myIndex < clockIndex ? shift - delta : shift;
       clockDisplay.ease({
         translation_x: 0,
-        duration: 500,
+        duration: ANIM.SLIDE,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
       });
 
@@ -220,7 +230,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this.translation_x = shift;
       this.ease({
         translation_x: 0,
-        duration: 500,
+        duration: ANIM.SLIDE,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
       });
     }
@@ -228,8 +238,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     _fadeIn(actor, onShown) {
       actor.ease({
         opacity: 255,
-        duration: 500,
-        delay: 150,
+        duration: ANIM.FADE_IN,
+        delay: ANIM.FADE_IN_DELAY,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         onComplete: () => {
           if (this._weather)
@@ -251,7 +261,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
       actor.ease({
         opacity: 0,
-        duration: 250,
+        duration: ANIM.FADE_OUT,
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
         onComplete: () => {
           if (!this._weather) return;
