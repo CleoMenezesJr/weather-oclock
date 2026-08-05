@@ -533,7 +533,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this.remove_all_transitions();
       this.ease({
         opacity: 0,
-        duration: 250,
+        duration: ANIM.FADE_OUT,
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
         onComplete: () => { this.visible = false; },
       });
