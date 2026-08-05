@@ -285,7 +285,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
     }
 
     _showWeather(iconName, temp, onShown = null) {
-      const changed = iconName !== this._currentIconName || temp !== this._currentTemp;
+      const iconChanged = iconName !== this._currentIconName;
+      const changed = iconChanged || temp !== this._currentTemp;
       const wasShowing = this._state === STATES.SHOWING;
       this._currentTemp = temp;
       this._currentIconName = iconName;
@@ -293,7 +294,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       if (wasShowing && (!changed || this._showingDescription))
         return;
 
-      this._applyTransition(wasShowing ? this._label : this, () => {
+      // Fading only the label would swap the icon underneath it at full opacity.
+      this._applyTransition(wasShowing && !iconChanged ? this._label : this, () => {
         this._spinner.stop();
         this._icon.icon_name = iconName;
         this._icon.show();
