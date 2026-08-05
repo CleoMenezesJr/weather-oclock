@@ -98,6 +98,8 @@ export default class WeatherOClock extends Extension {
   _addWidget() {
     const clockDisplay = this._originalClockDisplay;
 
+    this._panelWeather.cancelSlide();
+
     if (clockDisplay.get_parent() === this._topBox)
       this._topBox.remove_child(clockDisplay);
     if (this._panelWeather.get_parent() === this._topBox)
@@ -202,12 +204,20 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       return 0.5;
     }
 
-    // Width as the panel sees it, margins included. this.width is the allocation,
-    // which leaves the position class' margin out and biases every delta by it.
+    // Includes the margin; this.width is the allocation and leaves it out.
     _pillWidth() {
       if (!this.get_parent()) return 0;
       const [, natural] = this.get_preferred_width(-1);
       return natural;
+    }
+
+    // Reordering the box mid-slide would keep both actors heading to the old layout.
+    cancelSlide() {
+      for (const actor of [this, this._clockDisplay]) {
+        if (!actor) continue;
+        actor.remove_transition("translation-x");
+        actor.translation_x = 0;
+      }
     }
 
     _animateLayoutTranslation(fromWidth) {
@@ -225,7 +235,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       // delta when the weather grows into its slot.
       const shift = this._leftAnchorFraction() * delta;
 
-      clockDisplay.remove_all_transitions();
+      clockDisplay.remove_transition("translation-x");
       clockDisplay.translation_x = myIndex < clockIndex ? shift - delta : shift;
       clockDisplay.ease({
         translation_x: 0,
@@ -233,7 +243,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
       });
 
-      this.remove_all_transitions();
+      this.remove_transition("translation-x");
       this.translation_x = shift;
       this.ease({
         translation_x: 0,
