@@ -202,13 +202,20 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       return 0.5;
     }
 
+    // Width as the panel sees it, margins included. this.width is the allocation,
+    // which leaves the position class' margin out and biases every delta by it.
+    _pillWidth() {
+      if (!this.get_parent()) return 0;
+      const [, natural] = this.get_preferred_width(-1);
+      return natural;
+    }
+
     _animateLayoutTranslation(fromWidth) {
       const parent = this.get_parent();
       const clockDisplay = this._clockDisplay;
       if (!parent || !clockDisplay) return;
 
-      const [, toWidth] = this.get_preferred_width(-1);
-      const delta = toWidth - fromWidth;
+      const delta = this._pillWidth() - fromWidth;
       if (Math.abs(delta) <= 2) return;
 
       const children = parent.get_children();
@@ -250,7 +257,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
     _applyTransition(actor, applyFn, onShown = null) {
       if (!this.visible || this.opacity === 0 || actor.opacity === 0) {
-        const fromWidth = this.visible ? this.width : 0;
+        const fromWidth = this.visible ? this._pillWidth() : 0;
         applyFn();
         actor.opacity = 0;
         this.visible = true;
@@ -265,7 +272,7 @@ const WeatherOClockPanelWeather = GObject.registerClass(
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
         onComplete: () => {
           if (!this._weather) return;
-          const fromWidth = this.width;
+          const fromWidth = this._pillWidth();
           applyFn();
           this._animateLayoutTranslation(fromWidth);
           this._fadeIn(actor, onShown);
