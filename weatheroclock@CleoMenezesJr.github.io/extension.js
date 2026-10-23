@@ -171,7 +171,6 @@ const WeatherOClockPanelWeather = GObject.registerClass(
       this.add_child(this._label);
 
       this._pushSignal(this._weather, "changed", this._onWeatherInfoUpdate.bind(this));
-      this._pushSignal(this._weather, "notify::available", this._onAvailableChanged.bind(this));
       this._pushSignal(this._monitor, "notify::connectivity", this._onConnectivityChanged.bind(this));
 
       this._evaluateInitialState();
@@ -415,6 +414,8 @@ const WeatherOClockPanelWeather = GObject.registerClass(
 
     _onWeatherInfoUpdate(weather) {
       if (!this._weather) return;
+      // Installing or removing GNOME Weather is only signaled through "changed".
+      this._onAvailableChanged();
       if (this._state === STATES.UNAVAILABLE) return;
 
       if (weather.loading) {
